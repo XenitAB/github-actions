@@ -15,5 +15,5 @@ jobs:
           registry: docker.pkg.github.com
           image: xenitab/github-actions/tools
           tag_with_ref: true
-          directory: ./docker
+          dockerfile: ./docker/Dockerfile
 
