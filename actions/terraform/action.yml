@@ -1,0 +1,22 @@
+name: "terraform"
+description: "run terraform commands"
+inputs:
+  lint:
+    description: "Run tflint before"
+    default: "false"
+    required: false
+  terraform-version:
+    description:  "Version of Terraform to use"
+    default: "0.13.5"
+    required: false
+  apply:
+    description: "If true runs apply"
+    default: "false"
+    required: false
+outputs: {}
+runs:
+  using: 'docker'
+  image: 'docker://ghcr.io/xenitab/github-actions/tools:latest'
+  args:
+    - ${{ inputs.lint }}
+  entrypoint: 'entrypoint.sh'
