@@ -15,8 +15,8 @@ inputs:
     required: false
 outputs: {}
 runs:
-  using: 'docker'
-  image: 'docker://ghcr.io/xenitab/github-actions/tools:latest'
+  using: "docker"
+  image: "docker://ghcr.io/xenitab/github-actions/tools:latest"
   args:
     - ${{ inputs.lint }}
-  entrypoint: 'entrypoint.sh'
+  entrypoint: "terraform.sh"
