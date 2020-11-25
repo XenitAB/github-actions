@@ -10,4 +10,10 @@ RUN wget https://releases.hashicorp.com/terraform/0.13.5/terraform_0.13.5_linux_
     rm terraform_0.13.5_linux_amd64.zip && \
     mv terraform /usr/bin/terraform
 
+RUN wget https://github.com/open-policy-agent/opa/releases/download/v0.24.0/opa_linux_amd64 && \
+    chmod +x opa_linux_amd64 && \
+    mv opa_linux_amd64 /usr/bin/opa
+
+COPY opa-policies .
+COPY Invoke-PipelineTask.ps1 .
 COPY terraform.sh .
