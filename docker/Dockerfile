@@ -14,6 +14,6 @@ RUN wget https://github.com/open-policy-agent/opa/releases/download/v0.24.0/opa_
     chmod +x opa_linux_amd64 && \
     mv opa_linux_amd64 /usr/bin/opa
 
-COPY opa-policies .
-COPY Invoke-PipelineTask.ps1 .
-COPY terraform.sh .
+COPY opa-policies /opt
+COPY Invoke-PipelineTask.ps1 /opt
+COPY terraform.sh /opt

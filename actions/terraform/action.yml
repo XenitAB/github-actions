@@ -19,4 +19,4 @@ runs:
   image: "docker://ghcr.io/xenitab/github-actions/tools:latest"
   args:
     - ${{ inputs.lint }}
-  entrypoint: "terraform.sh"
+  entrypoint: "/opt/terraform.sh"
