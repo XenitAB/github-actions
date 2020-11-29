@@ -9,9 +9,7 @@ RUN apk update && \
     pip --no-cache-dir install azure-cli && \
     apk del --purge build
 
-RUN apk update && \
-    apk add ansible && \
-    apk del --purge build
+RUN pip --no-cache-dir install ansible
 
 RUN wget https://releases.hashicorp.com/packer/1.6.5/packer_1.6.5_linux_amd64.zip && \
     unzip packer_1.6.5_linux_amd64.zip && \
