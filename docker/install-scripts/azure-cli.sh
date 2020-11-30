@@ -7,9 +7,7 @@ while [ $# -gt 0 ]; do
       VERSION="${1#*=}"
       ;;
     *)
-      printf "***************************\n"
-      printf "* Error: Invalid argument.*\n"
-      printf "***************************\n"
+      echo "Error: Invalid argument."
       exit 1
   esac
   shift
