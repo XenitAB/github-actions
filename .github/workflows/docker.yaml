@@ -24,4 +24,3 @@ jobs:
           context: docker
           tags: ghcr.io/xenitab/github-actions/tools:latest
           push: true
-
