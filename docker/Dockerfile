@@ -51,6 +51,7 @@ COPY install-scripts/github-cli.sh /usr/src/install-scripts/github-cli.sh
 RUN /usr/src/install-scripts/github-cli.sh --version="1.3.0" --sha="56e540ddc978908fd236d53b00855c3526936392976e18bf429161963bbd45ec"
 
 # Cleanup should always be last
+COPY install-scripts/cleanup.sh /usr/src/install-scripts/cleanup.sh
 RUN /usr/src/install-scripts/cleanup.sh
 
 RUN rm -rf /tmp/install
