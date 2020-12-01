@@ -9,7 +9,7 @@ on:
 
 jobs:
   publish_latest:
-    name: Push Docker image to GitHub Packages
+    name: Push tagged container image to GitHub Packages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
