@@ -6,8 +6,8 @@ ENV GROUP="tools"
 RUN mkdir -p /tmp/install
 WORKDIR /tmp/install
 
-RUN addgroup -g 1001 -S ${GROUP} && \
-    adduser -S --ingroup ${GROUP} --uid 1001 ${USER}
+RUN addgroup -g 1000 -S ${GROUP} && \
+    adduser -S --ingroup ${GROUP} --uid 1000 ${USER}
 
 RUN mkdir -p /usr/src
 
