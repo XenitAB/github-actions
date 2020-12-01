@@ -60,4 +60,5 @@ COPY opa-policies /opt/opa-policies
 COPY terraform.sh /opt/terraform.sh
 
 USER ${USER}
+
 WORKDIR /home/${USER}
