@@ -7,7 +7,7 @@ on:
 
 jobs:
   pr_validation:
-    name: Push Docker image to GitHub Packages
+    name: Validate PR
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
