@@ -5,6 +5,7 @@ ACTION=$1
 DIR=$2
 ENVIRONMENT=$3
 SUFFIX=$4
+OPA_BLAST_RADIUS=$5
 
 RG_LOCATION_SHORT="we"
 RG_LOCATION_LONG="westeurope"
@@ -14,6 +15,11 @@ BACKEND_KV="kv-${ENVIRONMENT}-${RG_LOCATION_SHORT}-${SUFFIX}"
 BACKEND_KV_KEY="sops"
 BACKEND_NAME="sa${ENVIRONMENT}${RG_LOCATION_SHORT}${SUFFIX}"
 CONTAINER_NAME="tfstate-${DIR}"
+ENVIRONMENT_FILE="/tmp/${ENVIRONMENT}.env"
+
+if [ -z "${OPA_BLAST_RADIUS}" ]; then
+  OPA_BLAST_RADIUS=50
+fi
 
 set_azure_keyvault_permissions() {
   echo "Assigning permissions to Azure KeyVault ${BACKEND_KV}"
@@ -77,7 +83,20 @@ plan () {
 
   mkdir -p .terraform/plans
   terraform plan -input=false -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="../global.tfvars" -out=".terraform/plans/${ENVIRONMENT}"
+  terraform show -json .terraform/plans/${ENVIRONMENT} > .terraform/plans/${ENVIRONMENT}.json
+  cat /opt/opa-policies/data.json | jq ".blast_radius = ${OPA_BLAST_RADIUS}" > /tmp/opa-data.json
   opa test /opt/opa-policies -v
+  OPA_AUTHZ=$(opa eval --format pretty --data /tmp/opa-data.json --data /opt/opa-policies/terraform.rego --input .terraform/plans/${ENVIRONMENT}.json "data.terraform.analysis.authz")
+  OPA_SCORE=$(opa eval --format pretty --data /tmp/opa-data.json --data /opt/opa-policies/terraform.rego --input .terraform/plans/${ENVIRONMENT}.json "data.terraform.analysis.score")
+  if [[ "${OPA_AUTHZ}" == "true" ]]; then
+    echo "INFO: OPA Authorization: true (score: ${OPA_SCORE} / blast_radius: ${OPA_BLAST_RADIUS})"
+    rm -rf .terraform/plans/${ENVIRONMENT}.json
+  else
+    echo "ERROR: OPA Authorization: false (score: ${OPA_SCORE} / blast_radius: ${OPA_BLAST_RADIUS})"
+    rm -rf .terraform/plans/${ENVIRONMENT}.json
+    rm -rf .terraform/plans/${ENVIRONMENT}
+    exit 1
+  fi
   SOPS_KEY_ID="$(az keyvault key show --name ${BACKEND_KV_KEY} --vault-name ${BACKEND_KV} --query key.kid --output tsv)"
   sops --encrypt --azure-kv ${SOPS_KEY_ID} .terraform/plans/${ENVIRONMENT} > .terraform/plans/${ENVIRONMENT}.enc
   rm -rf .terraform/plans/${ENVIRONMENT}
@@ -87,18 +106,27 @@ apply () {
   SOPS_KEY_ID="$(az keyvault key show --name ${BACKEND_KV_KEY} --vault-name ${BACKEND_KV} --query key.kid --output tsv)"
   sops --decrypt --azure-kv ${SOPS_KEY_ID} .terraform/plans/${ENVIRONMENT}.enc > .terraform/plans/${ENVIRONMENT}
   rm -rf .terraform/plans/${ENVIRONMENT}.enc
-  terraform apply ".terraform/plans/dev"
+  set +e
+  terraform apply ".terraform/plans/${ENVIRONMENT}"
+  EXIT_CODE=$?
+  set -e
   rm -rf .terraform/plans/${ENVIRONMENT}
+  exit $EXIT_CODE
 }
 
 destroy () {
   echo "destroy"
 }
 
+envup() {
+  if [ -f ${ENVIRONMENT_FILE} ]; then
+    set -a
+    source ${ENVIRONMENT_FILE}
+    set +a
+  fi
+}
 
-
-# tfenv install 0.13.5
-# tfenv use 0.13.5
+envup
 cd /tmp/$DIR
 
 case $ACTION in
