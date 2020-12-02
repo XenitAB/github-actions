@@ -50,6 +50,10 @@ RUN /usr/src/install-scripts/sops.sh --version="v3.6.1" --sha="b2252aa00836c7253
 COPY install-scripts/github-cli.sh /usr/src/install-scripts/github-cli.sh
 RUN /usr/src/install-scripts/github-cli.sh --version="1.3.0" --sha="56e540ddc978908fd236d53b00855c3526936392976e18bf429161963bbd45ec"
 
+# Install jq
+COPY install-scripts/jq.sh /usr/src/install-scripts/jq.sh
+RUN /usr/src/install-scripts/jq.sh --version="1.6" --sha="af986793a515d500ab2d35f8d2aecd656e764504b789b66d7e1a0b727a124c44"
+
 # Cleanup should always be last
 COPY install-scripts/cleanup.sh /usr/src/install-scripts/cleanup.sh
 RUN /usr/src/install-scripts/cleanup.sh
