@@ -114,10 +114,15 @@ destroy () {
   echo "destroy"
 }
 
+envup() {
+  if [ -f ${ENVIRONMENT_FILE} ]; then
+    set -a
+    source ${ENVIRONMENT_FILE}
+    set +a
+  fi
+}
 
-
-# tfenv install 0.13.5
-# tfenv use 0.13.5
+envup
 cd /tmp/$DIR
 
 case $ACTION in
