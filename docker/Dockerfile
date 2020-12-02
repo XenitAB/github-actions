@@ -54,6 +54,10 @@ RUN /usr/src/install-scripts/github-cli.sh --version="1.3.0" --sha="56e540ddc978
 COPY install-scripts/jq.sh /usr/src/install-scripts/jq.sh
 RUN /usr/src/install-scripts/jq.sh --version="1.6" --sha="af986793a515d500ab2d35f8d2aecd656e764504b789b66d7e1a0b727a124c44"
 
+# Install yq
+COPY install-scripts/yq.sh /usr/src/install-scripts/yq.sh
+RUN /usr/src/install-scripts/yq.sh --version="2.11.1"
+
 # Cleanup should always be last
 COPY install-scripts/cleanup.sh /usr/src/install-scripts/cleanup.sh
 RUN /usr/src/install-scripts/cleanup.sh
