@@ -106,8 +106,12 @@ apply () {
   SOPS_KEY_ID="$(az keyvault key show --name ${BACKEND_KV_KEY} --vault-name ${BACKEND_KV} --query key.kid --output tsv)"
   sops --decrypt --azure-kv ${SOPS_KEY_ID} .terraform/plans/${ENVIRONMENT}.enc > .terraform/plans/${ENVIRONMENT}
   rm -rf .terraform/plans/${ENVIRONMENT}.enc
-  terraform apply ".terraform/plans/dev"
+  set +e
+  terraform apply ".terraform/plans/${ENVIRONMENT}"
+  EXIT_CODE=$?
+  set -e
   rm -rf .terraform/plans/${ENVIRONMENT}
+  exit $EXIT_CODE
 }
 
 destroy () {
