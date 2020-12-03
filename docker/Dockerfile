@@ -58,6 +58,14 @@ RUN /usr/src/install-scripts/jq.sh --version="1.6" --sha="af986793a515d500ab2d35
 COPY install-scripts/yq.sh /usr/src/install-scripts/yq.sh
 RUN /usr/src/install-scripts/yq.sh --version="2.11.1"
 
+# Install kubectl
+COPY install-scripts/kubectl.sh /usr/src/install-scripts/kubectl.sh
+RUN /usr/src/install-scripts/kubectl.sh --version="v1.19.0" --sha="79bb0d2f05487ff533999a639c075043c70a0a1ba25c1629eb1eef6ebe3ba70f"
+
+# Install helm
+COPY install-scripts/helm.sh /usr/src/install-scripts/helm.sh
+RUN /usr/src/install-scripts/helm.sh --version="v3.4.1" --sha="538f85b4b73ac6160b30fd0ab4b510441aa3fa326593466e8bf7084a9c288420"
+
 # Cleanup should always be last
 COPY install-scripts/cleanup.sh /usr/src/install-scripts/cleanup.sh
 RUN /usr/src/install-scripts/cleanup.sh
