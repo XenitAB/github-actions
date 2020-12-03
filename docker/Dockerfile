@@ -74,6 +74,7 @@ RUN rm -rf /tmp/install
 
 COPY opa-policies /opt/opa-policies
 COPY terraform.sh /opt/terraform.sh
+COPY packer.sh /opt/packer.sh
 
 USER ${USER}
 
