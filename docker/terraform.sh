@@ -117,7 +117,24 @@ apply () {
 }
 
 destroy () {
-  echo "destroy"
+  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
+  terraform workspace select ${ENVIRONMENT}
+  
+  echo "-------"
+  echo "You are about to run terraform destroy on ${DIR} in ${ENVIRONMENT}"
+  echo "-------"
+  
+  echo -n "Please confirm by writing \"${DIR}/${ENVIRONMENT}\": "
+  read VERIFICATION_INPUT
+
+  if [[ "${VERIFICATION_INPUT}" == "${DIR}/${ENVIRONMENT}" ]]; then
+    terraform destroy -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="../global.tfvars"
+  else
+    echo "Wrong input detected (${VERIFICATION_INPUT}). Exiting..."
+    exit 1
+  fi
+}
+
 }
 
 envup() {
