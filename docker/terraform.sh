@@ -117,8 +117,67 @@ apply () {
 }
 
 destroy () {
-  echo "destroy"
+  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
+  terraform workspace select ${ENVIRONMENT}
+  
+  echo "-------"
+  echo "You are about to run terraform destroy on ${DIR} in ${ENVIRONMENT}"
+  echo "-------"
+  
+  echo -n "Please confirm by writing \"${DIR}/${ENVIRONMENT}\": "
+  read VERIFICATION_INPUT
+
+  if [[ "${VERIFICATION_INPUT}" == "${DIR}/${ENVIRONMENT}" ]]; then
+    terraform destroy -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="../global.tfvars"
+  else
+    echo "Wrong input detected (${VERIFICATION_INPUT}). Exiting..."
+    exit 1
+  fi
 }
+
+state_remove () {
+  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
+  terraform workspace select ${ENVIRONMENT}
+  TF_STATE_OBJECTS=$(terraform state list)
+  
+  echo "-------"
+  echo "You are about to run terraform state rm on ${DIR} in ${ENVIRONMENT}"
+  echo "-------"
+  
+  echo -n "Please confirm by writing \"${DIR}/${ENVIRONMENT}\": "
+  read VERIFICATION_INPUT
+
+  if [[ "${VERIFICATION_INPUT}" == "${DIR}/${ENVIRONMENT}" ]]; then
+    echo -n "Please enter what to grep regex arguments (default: grep -E \".*\"): "
+    read GREP_ARGUMENT
+    GREP_ARGUMENT=${GREP_ARGUMENT:-.*}
+    TF_STATE_TO_REMOVE=$(echo "${TF_STATE_OBJECTS}" | grep -E "${GREP_ARGUMENT}")
+    TF_STATE_TO_REMOVE_COUNT=$(echo "${TF_STATE_TO_REMOVE}" | wc -l)
+    
+    echo "You are about to remove the following objects from the terraform state: "
+    echo ""
+    echo "-------"
+    echo "${TF_STATE_TO_REMOVE}"
+    echo "-------"
+    echo ""
+
+    echo -n "Please confirm the number of objects that will be removed (${TF_STATE_TO_REMOVE_COUNT}): "
+    read VERIFICATION_INPUT_COUNT
+    if [[ ${VERIFICATION_INPUT_COUNT} -eq ${TF_STATE_TO_REMOVE_COUNT} ]]; then
+      for TF_STATE_OBJECT in ${TF_STATE_TO_REMOVE}; do
+        terraform state rm ${TF_STATE_OBJECT}
+      done
+    else
+      echo "Wrong input detected (${VERIFICATION_INPUT_COUNT}). Exiting..."
+      exit 1
+    fi
+  else
+    echo "Wrong input detected (${VERIFICATION_INPUT}). Exiting..."
+    exit 1
+  fi
+}
+
+
 
 envup() {
   if [ -f ${ENVIRONMENT_FILE} ]; then
@@ -146,5 +205,9 @@ case $ACTION in
 
   prepare )
     prepare
+    ;;
+
+  state-remove )
+    state_remove
     ;;
 esac
