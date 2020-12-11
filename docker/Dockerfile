@@ -22,6 +22,10 @@ RUN /usr/src/install-scripts/base.sh
 COPY install-scripts/azure-cli.sh /usr/src/install-scripts/azure-cli.sh
 RUN /usr/src/install-scripts/azure-cli.sh --version="2.15.1"
 
+# Install AWS CLI
+COPY install-scripts/aws-cli.sh /usr/src/install-scripts/aws-cli.sh
+RUN /usr/src/install-scripts/aws-cli.sh --version="2.1.10"
+
 # Install Ansible
 COPY install-scripts/ansible.sh /usr/src/install-scripts/ansible.sh
 RUN /usr/src/install-scripts/ansible.sh --version="2.10.3"
