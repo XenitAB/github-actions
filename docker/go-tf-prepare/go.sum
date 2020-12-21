@@ -2,6 +2,8 @@ github.com/Azure/azure-sdk-for-go v0.2.0-beta h1:wYBqYNMWr0WL2lcEZi+dlK9n+N0wJ0P
 github.com/Azure/azure-sdk-for-go v46.0.0+incompatible h1:4qlEOCDcDQZTGczYGzbGYCdJfVpZLIs8AEo5+MoXBPw=
 github.com/Azure/azure-sdk-for-go v46.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/azure-sdk-for-go v49.1.0+incompatible h1:Sz6TnzkzwsiEgD84Vujpjo0vEox9/UMeyLVWBCkZwQ4=
+github.com/Azure/azure-sdk-for-go/sdk/arm/keyvault/2019-09-01/armkeyvault v0.1.0 h1:4QOAacPzIU1dw03tLFRA64r6+EuzXnKUUR2eeMwes8Y=
+github.com/Azure/azure-sdk-for-go/sdk/arm/keyvault/2019-09-01/armkeyvault v0.1.0/go.mod h1:3p+zC+iBXbnp1014TnjW42FHi594AKtpzIeJqbCGPks=
 github.com/Azure/azure-sdk-for-go/sdk/arm/resources/2020-06-01/armresources v0.1.0 h1:lukRorBGhLmNospZsyC4ZBmKFSPjFm0EP2zhnURENSQ=
 github.com/Azure/azure-sdk-for-go/sdk/arm/resources/2020-06-01/armresources v0.1.0/go.mod h1:BLfFIsqo/B2o7zUM/QbeTe9uu4FMpBjARi20XbmrOq8=
 github.com/Azure/azure-sdk-for-go/sdk/arm/storage/2019-06-01/armstorage v0.1.0 h1:zMV0Tb4H7GfW0jNwH6ZO2hZt7O/gDMMih4248s8Wdg4=

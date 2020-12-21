@@ -3,6 +3,7 @@ module github.com/xenitab/github-actions/docker/go-tf-prepare
 go 1.15
 
 require (
+	github.com/Azure/azure-sdk-for-go/sdk/arm/keyvault/2019-09-01/armkeyvault v0.1.0
 	github.com/Azure/azure-sdk-for-go/sdk/arm/resources/2020-06-01/armresources v0.1.0
 	github.com/Azure/azure-sdk-for-go/sdk/arm/storage/2019-06-01/armstorage v0.1.0
 	github.com/Azure/azure-sdk-for-go/sdk/armcore v0.5.1

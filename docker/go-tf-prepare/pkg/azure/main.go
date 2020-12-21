@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/arm/keyvault/2019-09-01/armkeyvault"
 	"github.com/Azure/azure-sdk-for-go/sdk/arm/resources/2020-06-01/armresources"
 	"github.com/Azure/azure-sdk-for-go/sdk/arm/storage/2019-06-01/armstorage"
 	"github.com/Azure/azure-sdk-for-go/sdk/armcore"
@@ -92,7 +93,7 @@ func CreateStorageAccount(ctx context.Context, resourceGroupName, resourceGroupL
 			log.Fatalf("failed to obtain a response: %v", err)
 		}
 
-		_, err = poller.PollUntilDone(context.Background(), 30*time.Second)
+		_, err = poller.PollUntilDone(ctx, 30*time.Second)
 		if err != nil {
 			return fmt.Errorf("Failed Azure/CreateStorageAccount/poller.PollUntilDone: %v", err)
 		}
@@ -112,7 +113,7 @@ func CreateStorageAccountContainer(ctx context.Context, resourceGroupName, stora
 	}
 	client := armstorage.NewBlobContainersClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
 	_, err = client.Get(
-		context.Background(),
+		ctx,
 		resourceGroupName,
 		storageAccountName,
 		storageAccountContainer, nil)
@@ -139,4 +140,58 @@ func CreateStorageAccountContainer(ctx context.Context, resourceGroupName, stora
 	}
 
 	return fmt.Errorf("Failed Azure/CreateStorageAccountContainer/armstorage.NewBlobContainersClient: %v", err)
+}
+
+// CreateKeyVault creates Azure Key Vault (if it doesn't exist) or returns error
+func CreateKeyVault(ctx context.Context, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID string) error {
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		return fmt.Errorf("Failed Azure/CreateKeyVault/azidentity.NewDefaultAzureCredential: %v", err)
+	}
+	client := armkeyvault.NewVaultsClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
+
+	_, err = client.Get(ctx, resourceGroupName, keyVaultName, nil)
+	if err == nil {
+		fmt.Printf("INFO: Azure KeyVault (%s) already exists.\n", keyVaultName)
+		return nil
+	}
+
+	if err != nil && strings.Contains(err.Error(), "ResourceNotFound") {
+		keyVaultNameAvailable, err := client.CheckNameAvailability(ctx, armkeyvault.VaultCheckNameAvailabilityParameters{Name: to.StringPtr(keyVaultName), Type: to.StringPtr("Microsoft.KeyVault/vaults")}, nil)
+		if err != nil {
+			return fmt.Errorf("Failed Azure/CreateKeyVault/client.CheckNameAvailability: %v", err)
+		}
+
+		if !*keyVaultNameAvailable.CheckNameAvailabilityResult.NameAvailable {
+			return fmt.Errorf("Failed Azure/CreateKeyVault/client.CheckNameAvailability: Azure KeyVault Name (%s) not available", keyVaultName)
+		}
+
+		poll, err := client.BeginCreateOrUpdate(
+			ctx,
+			resourceGroupName,
+			keyVaultName,
+			armkeyvault.VaultCreateOrUpdateParameters{
+				Location: to.StringPtr(resourceGroupLocation),
+				Properties: &armkeyvault.VaultProperties{
+					TenantID: to.StringPtr(tenantID),
+					SKU: &armkeyvault.SKU{
+						Family: armkeyvault.SKUFamilyA.ToPtr(),
+						Name:   armkeyvault.SKUNameStandard.ToPtr(),
+					},
+					AccessPolicies: &[]armkeyvault.AccessPolicyEntry{},
+				},
+			}, nil)
+		if err != nil {
+			return fmt.Errorf("Failed Azure/CreateKeyVault/client.BeginCreateOrUpdate: %v", err)
+		}
+		_, err = poll.PollUntilDone(ctx, 5*time.Second)
+		if err != nil {
+			return fmt.Errorf("Failed Azure/CreateKeyVault/poll.PollUntilDone: %v", err)
+		}
+
+		fmt.Printf("INFO: Azure KeyVault (%s) created.\n", keyVaultName)
+		return nil
+	}
+
+	return fmt.Errorf("Failed Azure/CreateKeyVault/client.Get: %v", err)
 }
