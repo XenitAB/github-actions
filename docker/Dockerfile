@@ -11,8 +11,9 @@ RUN addgroup -g 1000 -S ${GROUP} && \
 
 RUN mkdir -p /usr/src
 
+# libc6-compat is needed to load local terraform providers
 RUN apk update && \
-    apk add bash
+    apk add bash libc6-compat
 
 # Base should always be first
 COPY install-scripts/base.sh /usr/src/install-scripts/base.sh
