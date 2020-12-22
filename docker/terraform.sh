@@ -21,52 +21,10 @@ if [ -z "${OPA_BLAST_RADIUS}" ]; then
   OPA_BLAST_RADIUS=50
 fi
 
-set_azure_keyvault_permissions() {
-  echo "Assigning permissions to Azure KeyVault ${BACKEND_KV}"
-  AZ_ACCOUNT_TYPE="$(az account show --query user.type --output tsv)"
-  if [[ "${AZ_ACCOUNT_TYPE}" = "user" ]]; then
-    AZ_USER_OBJECT_ID="$(az ad signed-in-user show --query objectId --output tsv)"
-    az keyvault set-policy --name ${BACKEND_KV} --resource-group ${BACKEND_RG} --object-id ${AZ_USER_OBJECT_ID} --key-permissions create get list encrypt decrypt 1>/dev/null
-  elif [[ "${AZ_ACCOUNT_TYPE}" = "servicePrincipal" ]]; then
-    AZ_SPN="$(az account show --query user.name --output tsv)"
-    az keyvault set-policy --name ${BACKEND_KV} --resource-group ${BACKEND_RG} --spn ${AZ_SPN} --key-permissions create get list encrypt decrypt 1>/dev/null
-  fi
-}
-
 prepare () {
-  if [ $(az group exists --name ${BACKEND_RG}) = false ]; then
-    echo "INFO: Creating resource group ${BACKEND_RG} in location ${RG_LOCATION_LONG}"
-    az group create --name ${BACKEND_RG} --location ${RG_LOCATION_LONG}
-  fi
-
-  if ! $(az storage account show --resource-group ${BACKEND_RG} --name ${BACKEND_NAME} --output none); then
-    echo "Creating Azure Storage Account ${BACKEND_NAME} in location ${RG_LOCATION_LONG} / resource group ${BACKEND_RG}"
-    az storage account create --resource-group ${BACKEND_RG} --name ${BACKEND_NAME} 1>/dev/null
-  fi
-
-  if ! $(az storage container show --account-name ${BACKEND_NAME} --name ${CONTAINER_NAME} --output none); then
-    echo "Creating Azure Storage Container ${CONTAINER_NAME} in Storage Account ${BACKEND_NAME}"
-    az storage container create --account-name ${BACKEND_NAME} --name ${CONTAINER_NAME} 1>/dev/null
-  fi
-
-  if ! $(az keyvault show --name ${BACKEND_KV} --output none); then
-    echo "Creating Azure KeyVault ${BACKEND_KV} in location ${RG_LOCATION_LONG} / resource group ${BACKEND_RG}"
-    az keyvault create --name ${BACKEND_KV} --resource-group ${BACKEND_RG} --location ${RG_LOCATION_LONG} 1>/dev/null
-  fi
-
-  set +e
-  KEYVAULT_KEY_TEST="$(az keyvault key show --vault-name ${BACKEND_KV} --name ${BACKEND_KV_KEY} --output none 2>&1)"
-  if echo ${KEYVAULT_KEY_TEST} | grep KeyNotFound; then
-    echo "Creating Azure KeyVault key in ${BACKEND_KV}"
-    az keyvault key create --name ${BACKEND_KV_KEY} --vault-name ${BACKEND_KV} --protection software --ops encrypt decrypt 1>/dev/null
-    set_azure_keyvault_permissions
-  elif echo ${KEYVAULT_KEY_TEST} | grep "does not have keys get permission on key vault"; then
-    set_azure_keyvault_permissions
-  fi
-  set -e
-
-  az lock create --name DoNotDelete --resource-group ${BACKEND_RG} --lock-type CanNotDelete --resource-type Microsoft.Storage/storageAccounts --resource ${BACKEND_NAME} 1>/dev/null
-  az lock create --name DoNotDelete --resource-group ${BACKEND_RG} --lock-type CanNotDelete --resource-type Microsoft.KeyVault/vaults --resource ${BACKEND_KV} 1>/dev/null
+  AZURE_SUBSCRIPTION_ID=$(az account show --output tsv --query id)
+  AZURE_TENANT_ID=$(az account show --output tsv --query tenantId)
+  tf-prepare --resource-group-name="${BACKEND_RG}" --resource-group-location="${RG_LOCATION_LONG}" --subscription-id="${AZURE_SUBSCRIPTION_ID}" --tenant-id="${AZURE_TENANT_ID}" --storage-account-name="${BACKEND_NAME}" --storage-account-container="${CONTAINER_NAME}" --keyvault-name="${BACKEND_KV}" --keyvault-key-name="${BACKEND_KV_KEY}"
 }
 
 plan () {
