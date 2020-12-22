@@ -247,6 +247,7 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, resourceGroupName, resource
 	keyPermissions := armkeyvault.Permissions{
 		Keys: &[]armkeyvault.KeyPermissions{
 			armkeyvault.KeyPermissionsUpdate,
+			armkeyvault.KeyPermissionsCreate,
 			armkeyvault.KeyPermissionsGet,
 			armkeyvault.KeyPermissionsList,
 			armkeyvault.KeyPermissionsEncrypt,
