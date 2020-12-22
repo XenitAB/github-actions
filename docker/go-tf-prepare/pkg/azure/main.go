@@ -13,6 +13,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/armcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/to"
+	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-09-01/locks"
+	"github.com/jongio/azidext/go/azidext"
 )
 
 // CreateResourceGroup creates Azure Resource Group (if it doesn't exist) or returns error
@@ -194,4 +196,34 @@ func CreateKeyVault(ctx context.Context, resourceGroupName, resourceGroupLocatio
 	}
 
 	return fmt.Errorf("Failed Azure/CreateKeyVault/client.Get: %v", err)
+}
+
+// CreateResourceLock creates Azure Resource Lock (if it doesn't exist) or return error
+func CreateResourceLock(ctx context.Context, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName, subscriptionID string) error {
+	client := locks.NewManagementLocksClient(subscriptionID)
+
+	authorizer, err := azidext.NewDefaultAzureCredentialAdapter(nil)
+	if err != nil {
+		return fmt.Errorf("Failed Azure/CreateResourceLock/azidext.NewDefaultAzureCredentialAdapter: %v", err)
+	}
+
+	client.Authorizer = authorizer
+
+	_, err = client.GetAtResourceLevel(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName)
+	if err == nil {
+		fmt.Printf("INFO: Azure Resource Lock (%s/%s/%s/%s) already exists.\n", resourceGroupName, resourceProviderNamespace, resourceType, resourceName)
+		return nil
+	}
+
+	if err != nil && strings.Contains(err.Error(), "LockNotFound") {
+		_, err = client.CreateOrUpdateAtResourceLevel(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName, locks.ManagementLockObject{ManagementLockProperties: &locks.ManagementLockProperties{Level: "CanNotDelete", Notes: to.StringPtr("CanNotDelete")}})
+		if err != nil {
+			return fmt.Errorf("Failed Azure/CreateResourceLock/client.CreateOrUpdateAtResourceLevel: %v", err)
+		}
+
+		fmt.Printf("INFO: Azure Resource Lock (%s/%s/%s/%s) created.\n", resourceGroupName, resourceProviderNamespace, resourceType, resourceName)
+		return nil
+	}
+
+	return fmt.Errorf("Failed Azure/CreateResourceLock/client.GetAtResourceLevel: %v", err)
 }

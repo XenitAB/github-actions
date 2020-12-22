@@ -32,6 +32,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	err = azure.CreateResourceLock(ctx, *resourceGroupName, "Microsoft.Storage", "", "storageAccounts", *storageAccountName, "DoNotDelete", *subscriptionID)
+	if err != nil {
+		fmt.Printf("ERROR: %v \n", err)
+		os.Exit(1)
+	}
+
 	err = azure.CreateStorageAccountContainer(ctx, *resourceGroupName, *storageAccountName, *storageAccountContainer, *subscriptionID)
 	if err != nil {
 		fmt.Printf("ERROR: %v \n", err)
@@ -39,6 +45,12 @@ func main() {
 	}
 
 	err = azure.CreateKeyVault(ctx, *resourceGroupName, *resourceGroupLocation, *keyVaultName, *subscriptionID, *tenantID)
+	if err != nil {
+		fmt.Printf("ERROR: %v \n", err)
+		os.Exit(1)
+	}
+
+	err = azure.CreateResourceLock(ctx, *resourceGroupName, "Microsoft.KeyVault", "", "vaults", *keyVaultName, "DoNotDelete", *subscriptionID)
 	if err != nil {
 		fmt.Printf("ERROR: %v \n", err)
 		os.Exit(1)
