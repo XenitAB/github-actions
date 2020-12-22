@@ -97,10 +97,12 @@ func CreateStorageAccount(ctx context.Context, resourceGroupName, resourceGroupL
 					Name: armstorage.SKUNameStandardGrs.ToPtr(),
 					Tier: armstorage.SKUTierStandard.ToPtr(),
 				},
-				Kind:     armstorage.KindBlobStorage.ToPtr(),
+				Kind:     armstorage.KindStorageV2.ToPtr(),
 				Location: to.StringPtr(resourceGroupLocation),
 				Properties: &armstorage.StorageAccountPropertiesCreateParameters{
-					AccessTier: armstorage.AccessTierCool.ToPtr(),
+					AccessTier:            armstorage.AccessTierHot.ToPtr(),
+					AllowBlobPublicAccess: to.BoolPtr(false),
+					MinimumTLSVersion:     armstorage.MinimumTLSVersionTLS12.ToPtr(),
 				},
 			}, nil)
 
