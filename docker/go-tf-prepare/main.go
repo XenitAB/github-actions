@@ -23,56 +23,7 @@ func main() {
 			{
 				Name:  "azure",
 				Usage: "Terraform prepare for Azure",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "subscription-id",
-						Usage:    "Azure Subscription ID",
-						Required: true,
-						EnvVars:  []string{"AZURE_SUBSCRIPTION_ID"},
-					},
-					&cli.StringFlag{
-						Name:     "tenant-id",
-						Usage:    "Azure Tenant ID",
-						Required: true,
-						EnvVars:  []string{"AZURE_TENANT_ID"},
-					},
-					&cli.StringFlag{
-						Name:     "resource-group-name",
-						Usage:    "Azure Resource Group Name",
-						Required: true,
-						EnvVars:  []string{"AZURE_RESOURCE_GROUP_NAME"},
-					},
-					&cli.StringFlag{
-						Name:     "resource-group-location",
-						Usage:    "Azure Resource Group Location",
-						Required: true,
-						EnvVars:  []string{"AZURE_RESOURCE_GROUP_LOCATION"},
-					},
-					&cli.StringFlag{
-						Name:     "storage-account-name",
-						Usage:    "Azure Storage Account Name",
-						Required: true,
-						EnvVars:  []string{"AZURE_STORAGE_ACCOUNT_NAME"},
-					},
-					&cli.StringFlag{
-						Name:     "storage-account-container",
-						Usage:    "Azure Storage Account Container",
-						Required: true,
-						EnvVars:  []string{"AZURE_STORAGE_ACCOUNT_CONTAINER"},
-					},
-					&cli.StringFlag{
-						Name:     "keyvault-name",
-						Usage:    "Azure KeyVault Name",
-						Required: true,
-						EnvVars:  []string{"AZURE_KEYVAULT_NAME"},
-					},
-					&cli.StringFlag{
-						Name:     "keyvault-key-name",
-						Usage:    "Azure KeyVault Key Name",
-						Required: true,
-						EnvVars:  []string{"AZURE_KEYVAULT_KEY_NAME"},
-					},
-				},
+				Flags: azureFlags(),
 				Action: func(cli *cli.Context) error {
 					err := azureAction(ctx, cli)
 					if err != nil {
@@ -144,4 +95,58 @@ func azureAction(ctx context.Context, cli *cli.Context) error {
 	}
 
 	return nil
+}
+
+func azureFlags() []cli.Flag {
+	flags := []cli.Flag{
+		&cli.StringFlag{
+			Name:     "subscription-id",
+			Usage:    "Azure Subscription ID",
+			Required: true,
+			EnvVars:  []string{"AZURE_SUBSCRIPTION_ID"},
+		},
+		&cli.StringFlag{
+			Name:     "tenant-id",
+			Usage:    "Azure Tenant ID",
+			Required: true,
+			EnvVars:  []string{"AZURE_TENANT_ID"},
+		},
+		&cli.StringFlag{
+			Name:     "resource-group-name",
+			Usage:    "Azure Resource Group Name",
+			Required: true,
+			EnvVars:  []string{"AZURE_RESOURCE_GROUP_NAME"},
+		},
+		&cli.StringFlag{
+			Name:     "resource-group-location",
+			Usage:    "Azure Resource Group Location",
+			Required: true,
+			EnvVars:  []string{"AZURE_RESOURCE_GROUP_LOCATION"},
+		},
+		&cli.StringFlag{
+			Name:     "storage-account-name",
+			Usage:    "Azure Storage Account Name",
+			Required: true,
+			EnvVars:  []string{"AZURE_STORAGE_ACCOUNT_NAME"},
+		},
+		&cli.StringFlag{
+			Name:     "storage-account-container",
+			Usage:    "Azure Storage Account Container",
+			Required: true,
+			EnvVars:  []string{"AZURE_STORAGE_ACCOUNT_CONTAINER"},
+		},
+		&cli.StringFlag{
+			Name:     "keyvault-name",
+			Usage:    "Azure KeyVault Name",
+			Required: true,
+			EnvVars:  []string{"AZURE_KEYVAULT_NAME"},
+		},
+		&cli.StringFlag{
+			Name:     "keyvault-key-name",
+			Usage:    "Azure KeyVault Key Name",
+			Required: true,
+			EnvVars:  []string{"AZURE_KEYVAULT_KEY_NAME"},
+		},
+	}
+	return flags
 }
