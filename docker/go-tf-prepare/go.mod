@@ -14,5 +14,5 @@ require (
 	github.com/go-logr/logr v0.3.0
 	github.com/go-logr/stdr v0.3.0
 	github.com/jongio/azidext/go/azidext v0.1.0
-	github.com/spf13/pflag v1.0.5
+	github.com/urfave/cli/v2 v2.3.0
 )
