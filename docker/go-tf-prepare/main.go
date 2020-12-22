@@ -53,6 +53,7 @@ func azureAction(ctx context.Context, cli *cli.Context) error {
 	storageAccountContainer := cli.String("storage-account-container")
 	keyVaultName := cli.String("keyvault-name")
 	keyVaultKeyName := cli.String("keyvault-key-name")
+	resourceLocks := cli.Bool("resource-locks")
 
 	err := azure.CreateResourceGroup(ctx, resourceGroupName, resourceGroupLocation, subscriptionID)
 	if err != nil {
@@ -64,9 +65,11 @@ func azureAction(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
-	err = azure.CreateResourceLock(ctx, resourceGroupName, "Microsoft.Storage", "", "storageAccounts", storageAccountName, "DoNotDelete", subscriptionID)
-	if err != nil {
-		return err
+	if resourceLocks {
+		err = azure.CreateResourceLock(ctx, resourceGroupName, "Microsoft.Storage", "", "storageAccounts", storageAccountName, "DoNotDelete", subscriptionID)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = azure.CreateStorageAccountContainer(ctx, resourceGroupName, storageAccountName, storageAccountContainer, subscriptionID)
@@ -79,9 +82,11 @@ func azureAction(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
-	err = azure.CreateResourceLock(ctx, resourceGroupName, "Microsoft.KeyVault", "", "vaults", keyVaultName, "DoNotDelete", subscriptionID)
-	if err != nil {
-		return err
+	if resourceLocks {
+		err = azure.CreateResourceLock(ctx, resourceGroupName, "Microsoft.KeyVault", "", "vaults", keyVaultName, "DoNotDelete", subscriptionID)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = azure.CreateKeyVaultAccessPolicy(ctx, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID)
@@ -146,6 +151,12 @@ func azureFlags() []cli.Flag {
 			Usage:    "Azure KeyVault Key Name",
 			Required: true,
 			EnvVars:  []string{"AZURE_KEYVAULT_KEY_NAME"},
+		},
+		&cli.BoolFlag{
+			Name:    "resource-locks",
+			Usage:   "Should Azure Resource Locks be used?",
+			Value:   true,
+			EnvVars: []string{"AZURE_RESOURCE_LOCKS"},
 		},
 	}
 	return flags
