@@ -19,6 +19,7 @@ func main() {
 	storageAccountName := flag.String("storage-account-name", "", "Azure Storage Account Name")
 	storageAccountContainer := flag.String("storage-account-container", "", "Azure Storage Container")
 	keyVaultName := flag.String("keyvault-name", "", "Azure KeyVault Name")
+	keyVaultKeyName := flag.String("keyvault-key-name", "", "Azure KeyVault Key Name")
 	flag.Parse()
 
 	stdr.SetVerbosity(1)
@@ -62,6 +63,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	os.Exit(0)
+	err = azure.CreateKeyVaultKey(ctx, *resourceGroupName, *keyVaultName, *keyVaultKeyName, *subscriptionID)
+	if err != nil {
+		os.Exit(1)
+	}
 
+	os.Exit(0)
 }

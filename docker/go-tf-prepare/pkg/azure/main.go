@@ -296,6 +296,50 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, resourceGroupName, resource
 	return nil
 }
 
+// CreateKeyVaultKey creates Azure Key Vault Key (if it doesn't exist) or returns error
+func CreateKeyVaultKey(ctx context.Context, resourceGroupName, keyVaultName, keyName, subscriptionID string) error {
+	log := logr.FromContext(ctx)
+
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	if err != nil {
+		log.Error(err, "azidentity.NewDefaultAzureCredential")
+		return err
+	}
+
+	client := armkeyvault.NewKeysClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
+
+	_, err = client.Get(ctx, resourceGroupName, keyVaultName, keyName, nil)
+	if err == nil {
+		log.Info("Azure KeyVault Key already exists", "keyName", keyName)
+		return nil
+	}
+
+	_, err = client.CreateIfNotExist(
+		ctx,
+		resourceGroupName,
+		keyVaultName,
+		keyName,
+		armkeyvault.KeyCreateParameters{
+			Properties: &armkeyvault.KeyProperties{
+				Attributes: &armkeyvault.Attributes{
+					Enabled: to.BoolPtr(true),
+				},
+				KeySize: to.Int32Ptr(2048),
+				KeyOps: &[]armkeyvault.JSONWebKeyOperation{
+					armkeyvault.JSONWebKeyOperationEncrypt,
+					armkeyvault.JSONWebKeyOperationDecrypt,
+				},
+				Kty: armkeyvault.JSONWebKeyTypeRsa.ToPtr(),
+			}}, nil)
+	if err != nil {
+		log.Error(err, "armkeyvault.NewKeysClient")
+		return err
+	}
+
+	log.Info("Azure KeyVault Key created", "keyName", keyName)
+	return nil
+}
+
 // CreateResourceLock creates Azure Resource Lock (if it doesn't exist) or return error
 func CreateResourceLock(ctx context.Context, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName, subscriptionID string) error {
 	log := logr.FromContext(ctx)
