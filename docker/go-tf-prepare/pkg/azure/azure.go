@@ -229,13 +229,20 @@ func CreateKeyVault(ctx context.Context, resourceGroupName, resourceGroupLocatio
 }
 
 // CreateKeyVaultAccessPolicy creates Azure Key Vault Access Policy (if it doesn't exist) or returns error
-func CreateKeyVaultAccessPolicy(ctx context.Context, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID string) error {
+func CreateKeyVaultAccessPolicy(ctx context.Context, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID, servicePrincipalObjectID string) error {
 	log := logr.FromContext(ctx)
 
-	currentUserObjectID, err := getCurrentUserObjectID(ctx, tenantID)
-	if err != nil {
-		log.Error(err, "getCurrentUserObjectID")
-		return err
+	var currentUserObjectID string
+	if servicePrincipalObjectID == "" {
+		var err error
+		currentUserObjectID, err = getCurrentUserObjectID(ctx, tenantID)
+		if err != nil {
+			log.Error(err, "getCurrentUserObjectID")
+			return err
+		}
+	}
+	if servicePrincipalObjectID != "" {
+		currentUserObjectID = servicePrincipalObjectID
 	}
 
 	cred, err := azidentity.NewDefaultAzureCredential(nil)

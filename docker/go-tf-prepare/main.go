@@ -45,6 +45,7 @@ func main() {
 }
 
 func azureAction(ctx context.Context, cli *cli.Context) error {
+	servicePrincipalObjectID := cli.String("service-principal-object-id")
 	subscriptionID := cli.String("subscription-id")
 	tenantID := cli.String("tenant-id")
 	resourceGroupName := cli.String("resource-group-name")
@@ -89,7 +90,7 @@ func azureAction(ctx context.Context, cli *cli.Context) error {
 		}
 	}
 
-	err = azure.CreateKeyVaultAccessPolicy(ctx, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID)
+	err = azure.CreateKeyVaultAccessPolicy(ctx, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID, servicePrincipalObjectID)
 	if err != nil {
 		return err
 	}
@@ -104,6 +105,12 @@ func azureAction(ctx context.Context, cli *cli.Context) error {
 
 func azureFlags() []cli.Flag {
 	flags := []cli.Flag{
+		&cli.StringFlag{
+			Name:     "service-principal-object-id",
+			Usage:    "Service Principal Object ID",
+			Required: false,
+			EnvVars:  []string{"AZURE_SERVICE_PRINCIPAL_OBJECT_ID"},
+		},
 		&cli.StringFlag{
 			Name:     "subscription-id",
 			Usage:    "Azure Subscription ID",

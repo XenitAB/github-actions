@@ -22,9 +22,19 @@ if [ -z "${OPA_BLAST_RADIUS}" ]; then
 fi
 
 prepare () {
-  AZURE_SUBSCRIPTION_ID=$(az account show --output tsv --query id)
-  AZURE_TENANT_ID=$(az account show --output tsv --query tenantId)
-  tf-prepare --resource-group-name="${BACKEND_RG}" --resource-group-location="${RG_LOCATION_LONG}" --subscription-id="${AZURE_SUBSCRIPTION_ID}" --tenant-id="${AZURE_TENANT_ID}" --storage-account-name="${BACKEND_NAME}" --storage-account-container="${CONTAINER_NAME}" --keyvault-name="${BACKEND_KV}" --keyvault-key-name="${BACKEND_KV_KEY}"
+  AZ_ACCOUNT_TYPE="$(az account show --query user.type --output tsv)"
+  if [[ "${AZ_ACCOUNT_TYPE}" = "servicePrincipal" ]]; then
+    export AZURE_SERVICE_PRINCIPAL_OBJECT_ID="$(az account show --query user.name --output tsv)"
+  fi
+  export AZURE_SUBSCRIPTION_ID=$(az account show --output tsv --query id)
+  export AZURE_TENANT_ID=$(az account show --output tsv --query tenantId)
+  export AZURE_RESOURCE_GROUP_NAME="${BACKEND_RG}"
+  export AZURE_RESOURCE_GROUP_LOCATION="${RG_LOCATION_LONG}"
+  export AZURE_STORAGE_ACCOUNT_NAME="${BACKEND_NAME}"
+  export AZURE_STORAGE_ACCOUNT_CONTAINER="${CONTAINER_NAME}"
+  export AZURE_KEYVAULT_NAME="${BACKEND_KV}"
+  export AZURE_KEYVAULT_KEY_NAME="${BACKEND_KV_KEY}"
+  tf-prepare azure
 }
 
 plan () {
