@@ -356,7 +356,9 @@ func CreateResourceLock(ctx context.Context, defaultAzureCredentialOptions azide
 
 	client := locks.NewManagementLocksClient(subscriptionID)
 
-	credentialOptions := azidext.DefaultAzureCredentialOptions{DefaultCredential: &defaultAzureCredentialOptions}
+	tokenRequestOptions := azcore.TokenRequestOptions{Scopes: []string{"https://management.azure.com/.default"}}
+	authenticationPolicy := azcore.AuthenticationPolicyOptions{Options: tokenRequestOptions}
+	credentialOptions := azidext.DefaultAzureCredentialOptions{DefaultCredential: &defaultAzureCredentialOptions, AuthenticationPolicy: &authenticationPolicy}
 	authorizer, err := azidext.NewDefaultAzureCredentialAdapter(&credentialOptions)
 	if err != nil {
 		log.Error(err, "azidext.NewDefaultAzureCredentialAdapter")
