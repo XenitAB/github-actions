@@ -1,3 +1,12 @@
+FROM golang:1.15 as tf-prepare-builder
+WORKDIR /workspace
+
+COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
+RUN go mod download
+COPY ./go-tf-prepare/main.go main.go
+COPY ./go-tf-prepare/pkg/ pkg/
+RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
+
 FROM alpine:3.12.1
 
 ENV USER="tools"
@@ -74,6 +83,9 @@ RUN /usr/src/install-scripts/helm.sh --version="v3.4.1" --sha="538f85b4b73ac6160
 # Cleanup should always be last
 COPY install-scripts/cleanup.sh /usr/src/install-scripts/cleanup.sh
 RUN /usr/src/install-scripts/cleanup.sh
+
+COPY --from=tf-prepare-builder /workspace/tf-prepare /usr/local/bin/tf-prepare
+RUN chmod +x /usr/local/bin/tf-prepare
 
 RUN rm -rf /tmp/install
 
