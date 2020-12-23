@@ -3,68 +3,9 @@ package azure
 import (
 	"context"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/urfave/cli/v2"
 )
-
-// Action executes the Azure action
-func Action(ctx context.Context, cli *cli.Context) error {
-	servicePrincipalObjectID := cli.String("service-principal-object-id")
-	subscriptionID := cli.String("subscription-id")
-	tenantID := cli.String("tenant-id")
-	resourceGroupName := cli.String("resource-group-name")
-	resourceGroupLocation := cli.String("resource-group-location")
-	storageAccountName := cli.String("storage-account-name")
-	storageAccountContainer := cli.String("storage-account-container")
-	keyVaultName := cli.String("keyvault-name")
-	keyVaultKeyName := cli.String("keyvault-key-name")
-	resourceLocks := cli.Bool("resource-locks")
-
-	err := CreateResourceGroup(ctx, resourceGroupName, resourceGroupLocation, subscriptionID)
-	if err != nil {
-		return err
-	}
-
-	err = CreateStorageAccount(ctx, resourceGroupName, resourceGroupLocation, storageAccountName, subscriptionID)
-	if err != nil {
-		return err
-	}
-
-	if resourceLocks {
-		err = CreateResourceLock(ctx, resourceGroupName, "Microsoft.Storage", "", "storageAccounts", storageAccountName, "DoNotDelete", subscriptionID)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = CreateStorageAccountContainer(ctx, resourceGroupName, storageAccountName, storageAccountContainer, subscriptionID)
-	if err != nil {
-		return err
-	}
-
-	err = CreateKeyVault(ctx, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID)
-	if err != nil {
-		return err
-	}
-
-	if resourceLocks {
-		err = CreateResourceLock(ctx, resourceGroupName, "Microsoft.KeyVault", "", "vaults", keyVaultName, "DoNotDelete", subscriptionID)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = CreateKeyVaultAccessPolicy(ctx, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID, servicePrincipalObjectID)
-	if err != nil {
-		return err
-	}
-
-	err = CreateKeyVaultKey(ctx, resourceGroupName, keyVaultName, keyVaultKeyName, subscriptionID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // Flags returns the cli flags for Azure
 func Flags() []cli.Flag {
@@ -129,6 +70,89 @@ func Flags() []cli.Flag {
 			Value:   true,
 			EnvVars: []string{"AZURE_RESOURCE_LOCKS"},
 		},
+		&cli.BoolFlag{
+			Name:    "exclude-cli-credential",
+			Usage:   "Should Azure CLI authentication be excluded from authentication chain?",
+			Value:   false,
+			EnvVars: []string{"AZURE_EXCLUDE_CLI_CREDENTIAL"},
+		},
+		&cli.BoolFlag{
+			Name:    "exclude-environment-credential",
+			Usage:   "Should Azure Environment authentication be excluded from authentication chain?",
+			Value:   true,
+			EnvVars: []string{"AZURE_EXCLUDE_ENVIRONMENT_CREDENTIAL"},
+		},
+		&cli.BoolFlag{
+			Name:    "exclude-msi-credential",
+			Usage:   "Should Azure MSI authentication be excluded from authentication chain?",
+			Value:   true,
+			EnvVars: []string{"AZURE_EXCLUDE_MSI_CREDENTIAL"},
+		},
 	}
 	return flags
+}
+
+// Action executes the Azure action
+func Action(ctx context.Context, cli *cli.Context) error {
+	servicePrincipalObjectID := cli.String("service-principal-object-id")
+	subscriptionID := cli.String("subscription-id")
+	tenantID := cli.String("tenant-id")
+	resourceGroupName := cli.String("resource-group-name")
+	resourceGroupLocation := cli.String("resource-group-location")
+	storageAccountName := cli.String("storage-account-name")
+	storageAccountContainer := cli.String("storage-account-container")
+	keyVaultName := cli.String("keyvault-name")
+	keyVaultKeyName := cli.String("keyvault-key-name")
+	resourceLocks := cli.Bool("resource-locks")
+	defaultAzureCredentialOptions := azidentity.DefaultAzureCredentialOptions{
+		ExcludeAzureCLICredential:    cli.Bool("exclude-cli-credential"),
+		ExcludeEnvironmentCredential: cli.Bool("exclude-environment-credential"),
+		ExcludeMSICredential:         cli.Bool("exclude-msi-credential"),
+	}
+
+	err := CreateResourceGroup(ctx, defaultAzureCredentialOptions, resourceGroupName, resourceGroupLocation, subscriptionID)
+	if err != nil {
+		return err
+	}
+
+	err = CreateStorageAccount(ctx, defaultAzureCredentialOptions, resourceGroupName, resourceGroupLocation, storageAccountName, subscriptionID)
+	if err != nil {
+		return err
+	}
+
+	if resourceLocks {
+		err = CreateResourceLock(ctx, defaultAzureCredentialOptions, resourceGroupName, "Microsoft.Storage", "", "storageAccounts", storageAccountName, "DoNotDelete", subscriptionID)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = CreateStorageAccountContainer(ctx, defaultAzureCredentialOptions, resourceGroupName, storageAccountName, storageAccountContainer, subscriptionID)
+	if err != nil {
+		return err
+	}
+
+	err = CreateKeyVault(ctx, defaultAzureCredentialOptions, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID)
+	if err != nil {
+		return err
+	}
+
+	if resourceLocks {
+		err = CreateResourceLock(ctx, defaultAzureCredentialOptions, resourceGroupName, "Microsoft.KeyVault", "", "vaults", keyVaultName, "DoNotDelete", subscriptionID)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = CreateKeyVaultAccessPolicy(ctx, defaultAzureCredentialOptions, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID, servicePrincipalObjectID)
+	if err != nil {
+		return err
+	}
+
+	err = CreateKeyVaultKey(ctx, defaultAzureCredentialOptions, resourceGroupName, keyVaultName, keyVaultKeyName, subscriptionID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
