@@ -2,26 +2,37 @@ package azure
 
 import (
 	"context"
-	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/go-logr/logr"
-	"github.com/google/uuid"
+	"github.com/go-playground/validator/v10"
 	"github.com/urfave/cli/v2"
 )
 
 type azureConfig struct {
-	servicePrincipalObjectID      string
-	subscriptionID                string
-	tenantID                      string
-	resourceGroupName             string
-	resourceGroupLocation         string
-	storageAccountName            string
-	storageAccountContainer       string
-	keyVaultName                  string
-	keyVaultKeyName               string
-	resourceLocks                 bool
-	defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions
+	ServicePrincipalObjectID      string `validate:"omitempty,uuid"`
+	SubscriptionID                string `validate:"uuid"`
+	TenantID                      string `validate:"uuid"`
+	ResourceGroupName             string `validate:"resourcegroup,min=1,max=90"`
+	ResourceGroupLocation         string `validate:"alphanum,lowercase"`
+	StorageAccountName            string `validate:"alphanum,lowercase,min=3,max=24"`
+	StorageAccountContainer       string `validate:"storageaccountcontainer,min=3,max=24"`
+	KeyVaultName                  string `validate:"keyvault,min=3,max=24"`
+	KeyVaultKeyName               string `validate:"keyvaultkey,min=1,max=127"`
+	ResourceLocks                 bool
+	DefaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions
+}
+
+func (config azureConfig) Validate() error {
+	validate := validator.New()
+	validate.RegisterValidation("resourcegroup", validateResourceGroupName)
+	validate.RegisterValidation("storageaccountcontainer", validateStorageAccountContainerName)
+	validate.RegisterValidation("keyvault", validateKeyVaultName)
+	validate.RegisterValidation("keyvaultkey", validateKeyVaultKeyName)
+	err := validate.Struct(config)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Flags returns the cli flags for Azure
@@ -112,24 +123,29 @@ func Flags() []cli.Flag {
 // Action executes the Azure action
 func Action(ctx context.Context, cli *cli.Context) error {
 	config := azureConfig{
-		servicePrincipalObjectID: getUUID(ctx, cli, "service-principal-object-id"),
-		subscriptionID:           getUUID(ctx, cli, "subscription-id"),
-		tenantID:                 getUUID(ctx, cli, "tenant-id"),
-		resourceGroupName:        cli.String("resource-group-name"),
-		resourceGroupLocation:    cli.String("resource-group-location"),
-		storageAccountName:       cli.String("storage-account-name"),
-		storageAccountContainer:  cli.String("storage-account-container"),
-		keyVaultName:             cli.String("keyvault-name"),
-		keyVaultKeyName:          cli.String("keyvault-key-name"),
-		resourceLocks:            cli.Bool("resource-locks"),
-		defaultAzureCredentialOptions: azidentity.DefaultAzureCredentialOptions{
+		ServicePrincipalObjectID: cli.String("service-principal-object-id"),
+		SubscriptionID:           cli.String("subscription-id"),
+		TenantID:                 cli.String("tenant-id"),
+		ResourceGroupName:        cli.String("resource-group-name"),
+		ResourceGroupLocation:    cli.String("resource-group-location"),
+		StorageAccountName:       cli.String("storage-account-name"),
+		StorageAccountContainer:  cli.String("storage-account-container"),
+		KeyVaultName:             cli.String("keyvault-name"),
+		KeyVaultKeyName:          cli.String("keyvault-key-name"),
+		ResourceLocks:            cli.Bool("resource-locks"),
+		DefaultAzureCredentialOptions: azidentity.DefaultAzureCredentialOptions{
 			ExcludeAzureCLICredential:    cli.Bool("exclude-cli-credential"),
 			ExcludeEnvironmentCredential: cli.Bool("exclude-environment-credential"),
 			ExcludeMSICredential:         cli.Bool("exclude-msi-credential"),
 		},
 	}
 
-	err := CreateResourceGroup(ctx, config)
+	err := config.Validate()
+	if err != nil {
+		return err
+	}
+
+	err = CreateResourceGroup(ctx, config)
 	if err != nil {
 		return err
 	}
@@ -139,8 +155,8 @@ func Action(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
-	if config.resourceLocks {
-		err = CreateResourceLock(ctx, config, "Microsoft.Storage", "", "storageAccounts", config.storageAccountName, "DoNotDelete")
+	if config.ResourceLocks {
+		err = CreateResourceLock(ctx, config, "Microsoft.Storage", "", "storageAccounts", config.StorageAccountName, "DoNotDelete")
 		if err != nil {
 			return err
 		}
@@ -156,8 +172,8 @@ func Action(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
-	if config.resourceLocks {
-		err = CreateResourceLock(ctx, config, "Microsoft.KeyVault", "", "vaults", config.keyVaultName, "DoNotDelete")
+	if config.ResourceLocks {
+		err = CreateResourceLock(ctx, config, "Microsoft.KeyVault", "", "vaults", config.KeyVaultName, "DoNotDelete")
 		if err != nil {
 			return err
 		}
@@ -174,18 +190,4 @@ func Action(ctx context.Context, cli *cli.Context) error {
 	}
 
 	return nil
-}
-
-func getUUID(ctx context.Context, cli *cli.Context, flagName string) string {
-	log := logr.FromContext(ctx)
-	id := cli.String(flagName)
-
-	if id != "" {
-		_, err := uuid.Parse(id)
-		if err != nil {
-			log.Error(err, "Unable to parse UUID", "uuid", id, "flagName", flagName)
-			os.Exit(1)
-		}
-	}
-	return id
 }

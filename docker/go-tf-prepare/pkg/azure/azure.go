@@ -22,10 +22,10 @@ import (
 
 // CreateResourceGroup creates Azure Resource Group (if it doesn't exist) or returns error
 func CreateResourceGroup(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.defaultAzureCredentialOptions
-	resourceGroupName := config.resourceGroupName
-	resourceGroupLocation := config.resourceGroupLocation
-	subscriptionID := config.subscriptionID
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	resourceGroupLocation := config.ResourceGroupLocation
+	subscriptionID := config.SubscriptionID
 
 	log := logr.FromContext(ctx)
 
@@ -60,11 +60,11 @@ func CreateResourceGroup(ctx context.Context, config azureConfig) error {
 
 // CreateStorageAccount creates Azure Storage Account (if it doesn't exist) or returns error
 func CreateStorageAccount(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.defaultAzureCredentialOptions
-	resourceGroupName := config.resourceGroupName
-	resourceGroupLocation := config.resourceGroupLocation
-	storageAccountName := config.storageAccountName
-	subscriptionID := config.subscriptionID
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	resourceGroupLocation := config.ResourceGroupLocation
+	storageAccountName := config.StorageAccountName
+	subscriptionID := config.SubscriptionID
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -138,11 +138,11 @@ func CreateStorageAccount(ctx context.Context, config azureConfig) error {
 
 // CreateStorageAccountContainer creates Storage Account Container (if it doesn't exist) or returns error
 func CreateStorageAccountContainer(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.defaultAzureCredentialOptions
-	resourceGroupName := config.resourceGroupName
-	storageAccountName := config.storageAccountName
-	storageAccountContainer := config.storageAccountContainer
-	subscriptionID := config.subscriptionID
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	storageAccountName := config.StorageAccountName
+	storageAccountContainer := config.StorageAccountContainer
+	subscriptionID := config.SubscriptionID
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -185,12 +185,12 @@ func CreateStorageAccountContainer(ctx context.Context, config azureConfig) erro
 
 // CreateKeyVault creates Azure Key Vault (if it doesn't exist) or returns error
 func CreateKeyVault(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.defaultAzureCredentialOptions
-	resourceGroupName := config.resourceGroupName
-	resourceGroupLocation := config.resourceGroupLocation
-	keyVaultName := config.keyVaultName
-	subscriptionID := config.subscriptionID
-	tenantID := config.tenantID
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	resourceGroupLocation := config.ResourceGroupLocation
+	keyVaultName := config.KeyVaultName
+	subscriptionID := config.SubscriptionID
+	tenantID := config.TenantID
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -252,12 +252,12 @@ func CreateKeyVault(ctx context.Context, config azureConfig) error {
 
 // CreateKeyVaultAccessPolicy creates Azure Key Vault Access Policy (if it doesn't exist) or returns error
 func CreateKeyVaultAccessPolicy(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.defaultAzureCredentialOptions
-	resourceGroupName := config.resourceGroupName
-	keyVaultName := config.keyVaultName
-	subscriptionID := config.subscriptionID
-	tenantID := config.tenantID
-	servicePrincipalObjectID := config.servicePrincipalObjectID
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	keyVaultName := config.KeyVaultName
+	subscriptionID := config.SubscriptionID
+	tenantID := config.TenantID
+	servicePrincipalObjectID := config.ServicePrincipalObjectID
 	log := logr.FromContext(ctx)
 
 	var currentUserObjectID string
@@ -336,11 +336,11 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, config azureConfig) error {
 
 // CreateKeyVaultKey creates Azure Key Vault Key (if it doesn't exist) or returns error
 func CreateKeyVaultKey(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.defaultAzureCredentialOptions
-	resourceGroupName := config.resourceGroupName
-	keyVaultName := config.keyVaultName
-	keyName := config.keyVaultKeyName
-	subscriptionID := config.subscriptionID
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	keyVaultName := config.KeyVaultName
+	keyName := config.KeyVaultKeyName
+	subscriptionID := config.SubscriptionID
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -385,9 +385,9 @@ func CreateKeyVaultKey(ctx context.Context, config azureConfig) error {
 
 // CreateResourceLock creates Azure Resource Lock (if it doesn't exist) or return error
 func CreateResourceLock(ctx context.Context, config azureConfig, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName string) error {
-	defaultAzureCredentialOptions := config.defaultAzureCredentialOptions
-	resourceGroupName := config.resourceGroupName
-	subscriptionID := config.subscriptionID
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	subscriptionID := config.SubscriptionID
 	log := logr.FromContext(ctx)
 
 	client := locks.NewManagementLocksClient(subscriptionID)
