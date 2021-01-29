@@ -15,12 +15,18 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/to"
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-09-01/locks"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/go-logr/logr"
 	"github.com/jongio/azidext/go/azidext"
 )
 
 // CreateResourceGroup creates Azure Resource Group (if it doesn't exist) or returns error
-func CreateResourceGroup(ctx context.Context, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions, resourceGroupName, resourceGroupLocation, subscriptionID string) error {
+func CreateResourceGroup(ctx context.Context, config azureConfig) error {
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	resourceGroupLocation := config.ResourceGroupLocation
+	subscriptionID := config.SubscriptionID
+
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -53,7 +59,12 @@ func CreateResourceGroup(ctx context.Context, defaultAzureCredentialOptions azid
 }
 
 // CreateStorageAccount creates Azure Storage Account (if it doesn't exist) or returns error
-func CreateStorageAccount(ctx context.Context, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions, resourceGroupName, resourceGroupLocation, storageAccountName, subscriptionID string) error {
+func CreateStorageAccount(ctx context.Context, config azureConfig) error {
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	resourceGroupLocation := config.ResourceGroupLocation
+	storageAccountName := config.StorageAccountName
+	subscriptionID := config.SubscriptionID
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -126,7 +137,12 @@ func CreateStorageAccount(ctx context.Context, defaultAzureCredentialOptions azi
 }
 
 // CreateStorageAccountContainer creates Storage Account Container (if it doesn't exist) or returns error
-func CreateStorageAccountContainer(ctx context.Context, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions, resourceGroupName, storageAccountName, storageAccountContainer, subscriptionID string) error {
+func CreateStorageAccountContainer(ctx context.Context, config azureConfig) error {
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	storageAccountName := config.StorageAccountName
+	storageAccountContainer := config.StorageAccountContainer
+	subscriptionID := config.SubscriptionID
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -168,7 +184,13 @@ func CreateStorageAccountContainer(ctx context.Context, defaultAzureCredentialOp
 }
 
 // CreateKeyVault creates Azure Key Vault (if it doesn't exist) or returns error
-func CreateKeyVault(ctx context.Context, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID string) error {
+func CreateKeyVault(ctx context.Context, config azureConfig) error {
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	resourceGroupLocation := config.ResourceGroupLocation
+	keyVaultName := config.KeyVaultName
+	subscriptionID := config.SubscriptionID
+	tenantID := config.TenantID
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -229,7 +251,13 @@ func CreateKeyVault(ctx context.Context, defaultAzureCredentialOptions azidentit
 }
 
 // CreateKeyVaultAccessPolicy creates Azure Key Vault Access Policy (if it doesn't exist) or returns error
-func CreateKeyVaultAccessPolicy(ctx context.Context, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions, resourceGroupName, resourceGroupLocation, keyVaultName, subscriptionID, tenantID, servicePrincipalObjectID string) error {
+func CreateKeyVaultAccessPolicy(ctx context.Context, config azureConfig) error {
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	keyVaultName := config.KeyVaultName
+	subscriptionID := config.SubscriptionID
+	tenantID := config.TenantID
+	servicePrincipalObjectID := config.ServicePrincipalObjectID
 	log := logr.FromContext(ctx)
 
 	var currentUserObjectID string
@@ -307,7 +335,12 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, defaultAzureCredentialOptio
 }
 
 // CreateKeyVaultKey creates Azure Key Vault Key (if it doesn't exist) or returns error
-func CreateKeyVaultKey(ctx context.Context, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions, resourceGroupName, keyVaultName, keyName, subscriptionID string) error {
+func CreateKeyVaultKey(ctx context.Context, config azureConfig) error {
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	keyVaultName := config.KeyVaultName
+	keyName := config.KeyVaultKeyName
+	subscriptionID := config.SubscriptionID
 	log := logr.FromContext(ctx)
 
 	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
@@ -351,17 +384,17 @@ func CreateKeyVaultKey(ctx context.Context, defaultAzureCredentialOptions aziden
 }
 
 // CreateResourceLock creates Azure Resource Lock (if it doesn't exist) or return error
-func CreateResourceLock(ctx context.Context, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName, subscriptionID string) error {
+func CreateResourceLock(ctx context.Context, config azureConfig, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName string) error {
+	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+	resourceGroupName := config.ResourceGroupName
+	subscriptionID := config.SubscriptionID
 	log := logr.FromContext(ctx)
 
 	client := locks.NewManagementLocksClient(subscriptionID)
 
-	tokenRequestOptions := azcore.TokenRequestOptions{Scopes: []string{"https://management.azure.com/.default"}}
-	authenticationPolicy := azcore.AuthenticationPolicyOptions{Options: tokenRequestOptions}
-	credentialOptions := azidext.DefaultAzureCredentialOptions{DefaultCredential: &defaultAzureCredentialOptions, AuthenticationPolicy: &authenticationPolicy}
-	authorizer, err := azidext.NewDefaultAzureCredentialAdapter(&credentialOptions)
+	authorizer, err := getAuthorizer(ctx, []string{"https://management.azure.com/.default"}, defaultAzureCredentialOptions)
 	if err != nil {
-		log.Error(err, "azidext.NewDefaultAzureCredentialAdapter")
+		log.Error(err, "getAuthorizer")
 		return err
 	}
 
@@ -393,12 +426,9 @@ func getCurrentUserObjectID(ctx context.Context, defaultAzureCredentialOptions a
 
 	client := graphrbac.NewSignedInUserClient(tenantID)
 
-	tokenRequestOptions := azcore.TokenRequestOptions{Scopes: []string{"https://graph.windows.net/.default"}}
-	authenticationPolicy := azcore.AuthenticationPolicyOptions{Options: tokenRequestOptions}
-	credentialOptions := azidext.DefaultAzureCredentialOptions{DefaultCredential: &defaultAzureCredentialOptions, AuthenticationPolicy: &authenticationPolicy}
-	authorizer, err := azidext.NewDefaultAzureCredentialAdapter(&credentialOptions)
+	authorizer, err := getAuthorizer(ctx, []string{"https://graph.windows.net/.default"}, defaultAzureCredentialOptions)
 	if err != nil {
-		log.Error(err, "azidext.NewDefaultAzureCredentialAdapter")
+		log.Error(err, "getAuthorizer")
 		return "", err
 	}
 
@@ -434,4 +464,19 @@ OUTER:
 	}
 
 	return true
+}
+
+func getAuthorizer(ctx context.Context, scopes []string, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions) (autorest.Authorizer, error) {
+	log := logr.FromContext(ctx)
+
+	tokenRequestOptions := azcore.TokenRequestOptions{Scopes: scopes}
+	authenticationPolicy := azcore.AuthenticationPolicyOptions{Options: tokenRequestOptions}
+	credentialOptions := azidext.DefaultAzureCredentialOptions{DefaultCredential: &defaultAzureCredentialOptions, AuthenticationPolicy: &authenticationPolicy}
+	authorizer, err := azidext.NewDefaultAzureCredentialAdapter(&credentialOptions)
+	if err != nil {
+		log.Error(err, "azidext.NewDefaultAzureCredentialAdapter")
+		return nil, err
+	}
+
+	return authorizer, nil
 }
