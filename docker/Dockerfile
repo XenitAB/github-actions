@@ -50,7 +50,7 @@ RUN /usr/src/install-scripts/tflint.sh --version="v0.21.0" --sha="f80a85dbe88d39
 
 # Install terraform (tfenv)
 COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
-RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="0.13.5" --tfenv-version="v2.0.0" --user="${USER}" --group="${GROUP}"
+RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="0.14.7" --tfenv-version="v2.2.0" --user="${USER}" --group="${GROUP}"
 
 # Install Open Policy Agent
 COPY install-scripts/opa.sh /usr/src/install-scripts/opa.sh
