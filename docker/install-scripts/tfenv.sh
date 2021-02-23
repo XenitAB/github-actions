@@ -25,7 +25,8 @@ done
 git clone -b ${TFENV_VERSION} https://github.com/tfutils/tfenv.git /opt/tfenv
 ln -s /opt/tfenv/bin/* /usr/local/bin
 
-tfenv list-remote | grep -v "-" | grep ${LATEST_TERRAFORM_VERSION} -A 4 | xargs -t -I % tfenv install %
+#tfenv list-remote | grep -v "-" | grep ${LATEST_TERRAFORM_VERSION} -A 4 | xargs -t -I % tfenv install %
+tfenv install ${LATEST_TERRAFORM_VERSION}
 tfenv use ${LATEST_TERRAFORM_VERSION}
 
 chown -R ${USER}:${GROUP} /opt/tfenv
