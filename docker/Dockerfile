@@ -46,7 +46,7 @@ RUN /usr/src/install-scripts/packer.sh --version="1.6.5" --sha="a49f6408a50c220f
 
 # Install tflint
 COPY install-scripts/tflint.sh /usr/src/install-scripts/tflint.sh
-RUN /usr/src/install-scripts/tflint.sh --version="v0.21.0" --sha="f80a85dbe88d39231faef5ad10f3a2ecccca70496476ebbc608a78bfabcaa904"
+RUN /usr/src/install-scripts/tflint.sh --version="v0.24.1" --sha="2dbe3b423f5d3e0bb458d51761c97d51a4fd6c3d7bd1efd87c4aa3dc5199e7b2"
 
 # Install terraform (tfenv)
 COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
