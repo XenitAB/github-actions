@@ -150,7 +150,15 @@ state_remove () {
   fi
 }
 
-
+validate () {
+  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
+  terraform workspace select ${ENVIRONMENT}
+  terraform validate
+  terraform fmt .
+  terraform fmt variables/
+  tflint --config="/home/${USER}/.tflint.d/.tflint.hcl" --var-file="variables/${ENVIRONMENT}.tfvars" --var-file="variables/common.tfvars" --var-file="../global.tfvars" .
+  tfsec .
+}
 
 envup() {
   if [ -f ${ENVIRONMENT_FILE} ]; then
@@ -182,5 +190,9 @@ case $ACTION in
 
   state-remove )
     state_remove
+    ;;
+
+  validate )
+    validate
     ;;
 esac

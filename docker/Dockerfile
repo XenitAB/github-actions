@@ -46,11 +46,21 @@ RUN /usr/src/install-scripts/packer.sh --version="1.6.5" --sha="a49f6408a50c220f
 
 # Install tflint
 COPY install-scripts/tflint.sh /usr/src/install-scripts/tflint.sh
-RUN /usr/src/install-scripts/tflint.sh --version="v0.21.0" --sha="f80a85dbe88d39231faef5ad10f3a2ecccca70496476ebbc608a78bfabcaa904"
+RUN /usr/src/install-scripts/tflint.sh --version="v0.24.1" --sha="2dbe3b423f5d3e0bb458d51761c97d51a4fd6c3d7bd1efd87c4aa3dc5199e7b2" --user="${USER}"
+COPY config/.tflint.hcl /home/${USER}/.tflint.d/.tflint.hcl
+
+# Install tflint ruleset
+COPY install-scripts/tflint-ruleset.sh /usr/src/install-scripts/tflint-ruleset.sh
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.8.2" --sha="4ef97bbc847bde194401c3206eb127fffaf4ce430127e0408878a8a833242a30" --user="${USER}" --group="${GROUP}"
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.2.1" --sha="ec2a992a8413227e2321d985b62cde34bc34287599894f966b0fc8904aba0d8a" --user="${USER}" --group="${GROUP}"
 
 # Install terraform (tfenv)
 COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
 RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="0.14.7" --tfenv-version="v2.2.0" --user="${USER}" --group="${GROUP}"
+
+# Install tfsec
+COPY install-scripts/tfsec.sh /usr/src/install-scripts/tfsec.sh
+RUN /usr/src/install-scripts/tfsec.sh --version="v0.39.5" --sha="60e52ef9a2b2eb5aebf74fbebfbaf0d30fa107816a8bbc2759cfe5d5c2a9021d"
 
 # Install Open Policy Agent
 COPY install-scripts/opa.sh /usr/src/install-scripts/opa.sh

@@ -9,9 +9,6 @@ while [ $# -gt 0 ]; do
     --sha=*)
       SHA="${1#*=}"
       ;;
-    --user=*)
-      USER="${1#*=}"
-      ;;
     *)
       echo "Error: Invalid argument."
       exit 1
@@ -19,15 +16,14 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-wget https://github.com/terraform-linters/tflint/releases/download/${VERSION}/tflint_linux_amd64.zip
 
-DOWNLOAD_SHA=$(openssl sha1 -sha256 tflint_linux_amd64.zip | awk '{print $2}')
+wget https://github.com/tfsec/tfsec/releases/download/${VERSION}/tfsec-linux-amd64
+
+DOWNLOAD_SHA=$(openssl sha1 -sha256 tfsec-linux-amd64 | awk '{print $2}')
 if [[ "${SHA}" != "${DOWNLOAD_SHA}" ]]; then
     echo "Downloaded checksum (${DOWNLOAD_SHA}) does not match expected value: ${SHA}"
     exit 1
 fi
 
-unzip tflint_linux_amd64.zip
-rm tflint_linux_amd64.zip
-mv tflint /usr/local/bin/tflint
-mkdir -p /home/${USER}/.tflint.d
+chmod +x tfsec-linux-amd64
+mv tfsec-linux-amd64 /usr/local/bin/tfsec
