@@ -8,8 +8,8 @@ plugin "azurerm" {
     enabled = true
 }
 
-plugin "azurerm" {
-    enabled = aws
+plugin "aws" {
+    enabled = true
 }
 
 rule "terraform_deprecated_interpolation" {

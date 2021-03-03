@@ -58,6 +58,10 @@ RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.2.1
 COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
 RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="0.14.7" --tfenv-version="v2.2.0" --user="${USER}" --group="${GROUP}"
 
+# Install tfsec
+COPY install-scripts/tfsec.sh /usr/src/install-scripts/tfsec.sh
+RUN /usr/src/install-scripts/tfsec.sh --version="v0.39.5" --sha="60e52ef9a2b2eb5aebf74fbebfbaf0d30fa107816a8bbc2759cfe5d5c2a9021d"
+
 # Install Open Policy Agent
 COPY install-scripts/opa.sh /usr/src/install-scripts/opa.sh
 RUN /usr/src/install-scripts/opa.sh --version="v0.24.0" --sha="e40bde4cca8a5819518e3c35862bc5b6c388bc2904d412227059af29170f79e9"
