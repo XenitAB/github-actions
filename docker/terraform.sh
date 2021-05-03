@@ -46,13 +46,7 @@ plan () {
   rm -f .terraform/plans/${ENVIRONMENT}
   terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
 
-  set +e
-  terraform workspace select ${ENVIRONMENT} 2> /dev/null
-  if [ $? -ne 0 ]; then
-    terraform workspace new ${ENVIRONMENT}
-    terraform workspace select ${ENVIRONMENT}
-  fi
-  set -e
+  select_workspace
 
   mkdir -p .terraform/plans
   terraform plan -input=false -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="../global.tfvars" -out=".terraform/plans/${ENVIRONMENT}"
@@ -152,12 +146,22 @@ state_remove () {
 
 validate () {
   terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
-  terraform workspace select ${ENVIRONMENT}
+  select_workspace
   terraform validate
   terraform fmt .
   terraform fmt variables/
   tflint --config="/home/${USER}/.tflint.d/.tflint.hcl" --var-file="variables/${ENVIRONMENT}.tfvars" --var-file="variables/common.tfvars" --var-file="../global.tfvars" .
   tfsec .
+}
+
+select_workspace() {
+  set +e 
+  terraform workspace select ${ENVIRONMENT} 2> /dev/null 
+  if [ $? -ne 0 ]; then 
+    terraform workspace new ${ENVIRONMENT} 
+    terraform workspace select ${ENVIRONMENT} 
+  fi 
+  set -e 
 }
 
 envup() {
