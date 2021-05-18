@@ -56,7 +56,7 @@ RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.2.1
 
 # Install terraform (tfenv)
 COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
-RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="0.14.7" --tfenv-version="v2.2.0" --user="${USER}" --group="${GROUP}"
+RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="0.15.3" --tfenv-version="v2.2.2" --user="${USER}" --group="${GROUP}"
 
 # Install tfsec
 COPY install-scripts/tfsec.sh /usr/src/install-scripts/tfsec.sh
