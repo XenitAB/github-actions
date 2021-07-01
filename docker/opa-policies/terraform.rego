@@ -26,7 +26,11 @@ weights = {
     "azurerm_virtual_machine": {"delete": 100, "create": 1, "modify": 1},
     "azuread_application_password": {"delete": 100, "create": 1, "modify": 100},
     "azurerm_user_assigned_identity": {"delete": 100, "create": 1, "modify": 100},
-    "helm_release": {"delete": 100, "create": 1, "modify": 1}
+    "helm_release": {"delete": 100, "create": 1, "modify": 1},
+    "aws_ecr_repository": {"delete": 100, "create": 1, "modify": 1},
+    "aws_eks_cluster": {"delete": 100, "create": 1, "modify": 1},
+    "aws_s3_bucket": {"delete": 100, "create": 1, "modify": 1},
+    "aws_vpc": {"delete": 100, "create": 1, "modify": 1}
 }
 
 resource_types = { r | weights[r] }
