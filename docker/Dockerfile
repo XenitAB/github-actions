@@ -9,16 +9,8 @@ RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
 
 FROM alpine:3.12.1
 
-ENV USER="tools"
-ENV GROUP="tools"
-
-RUN mkdir -p /tmp/install
+RUN mkdir -p /tmp/install /usr/src /work
 WORKDIR /tmp/install
-
-RUN addgroup -g 1000 -S ${GROUP} && \
-    adduser -S --ingroup ${GROUP} --uid 1000 ${USER}
-
-RUN mkdir -p /usr/src
 
 # libc6-compat is needed to load local terraform providers
 RUN apk update && \
@@ -46,17 +38,17 @@ RUN /usr/src/install-scripts/packer.sh --version="1.6.5" --sha="a49f6408a50c220f
 
 # Install tflint
 COPY install-scripts/tflint.sh /usr/src/install-scripts/tflint.sh
-RUN /usr/src/install-scripts/tflint.sh --version="v0.24.1" --sha="2dbe3b423f5d3e0bb458d51761c97d51a4fd6c3d7bd1efd87c4aa3dc5199e7b2" --user="${USER}"
-COPY config/.tflint.hcl /home/${USER}/.tflint.d/.tflint.hcl
+RUN /usr/src/install-scripts/tflint.sh --version="v0.24.1" --sha="2dbe3b423f5d3e0bb458d51761c97d51a4fd6c3d7bd1efd87c4aa3dc5199e7b2"
+COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
 
 # Install tflint ruleset
 COPY install-scripts/tflint-ruleset.sh /usr/src/install-scripts/tflint-ruleset.sh
-RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.8.2" --sha="4ef97bbc847bde194401c3206eb127fffaf4ce430127e0408878a8a833242a30" --user="${USER}" --group="${GROUP}"
-RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.2.1" --sha="ec2a992a8413227e2321d985b62cde34bc34287599894f966b0fc8904aba0d8a" --user="${USER}" --group="${GROUP}"
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.8.2" --sha="4ef97bbc847bde194401c3206eb127fffaf4ce430127e0408878a8a833242a30"
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.2.1" --sha="ec2a992a8413227e2321d985b62cde34bc34287599894f966b0fc8904aba0d8a"
 
 # Install terraform (tfenv)
 COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
-RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="0.15.3" --tfenv-version="v2.2.2" --user="${USER}" --group="${GROUP}"
+RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="0.15.3" --tfenv-version="v2.2.2"
 
 # Install tfsec
 COPY install-scripts/tfsec.sh /usr/src/install-scripts/tfsec.sh
@@ -103,6 +95,6 @@ COPY opa-policies /opt/opa-policies
 COPY terraform.sh /opt/terraform.sh
 COPY packer.sh /opt/packer.sh
 
-USER ${USER}
+ENV HOME=/work
 
-WORKDIR /home/${USER}
+WORKDIR /work

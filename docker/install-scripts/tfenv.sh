@@ -9,12 +9,6 @@ while [ $# -gt 0 ]; do
     --tfenv-version=*)
       TFENV_VERSION="${1#*=}"
       ;;
-    --user=*)
-      USER="${1#*=}"
-      ;;
-    --group=*)
-      GROUP="${1#*=}"
-      ;;
     *)
       echo "Error: Invalid argument."
       exit 1
@@ -28,5 +22,3 @@ ln -s /opt/tfenv/bin/* /usr/local/bin
 #tfenv list-remote | grep -v "-" | grep ${LATEST_TERRAFORM_VERSION} -A 4 | xargs -t -I % tfenv install %
 tfenv install ${LATEST_TERRAFORM_VERSION}
 tfenv use ${LATEST_TERRAFORM_VERSION}
-
-chown -R ${USER}:${GROUP} /opt/tfenv
