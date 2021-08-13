@@ -95,7 +95,8 @@ func CreateStorageAccount(ctx context.Context, config azureConfig) error {
 		}
 
 		if !*res.CheckNameAvailabilityResult.NameAvailable {
-			log.Error(err, "client.CheckNameAvailability: Azure Storage Account Name not available", "storageAccountName", storageAccountName)
+			err := fmt.Errorf("Azure Storage Account Name '%s' not available", storageAccountName)
+			log.Error(err, "azure.CreateStorageAccount")
 			return err
 		}
 
