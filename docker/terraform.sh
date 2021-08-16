@@ -76,7 +76,7 @@ apply () {
   sops --decrypt --azure-kv ${SOPS_KEY_ID} .terraform/plans/${ENVIRONMENT}.enc > .terraform/plans/${ENVIRONMENT}
   rm -rf .terraform/plans/${ENVIRONMENT}.enc
   set +e
-  terraform apply ".terraform/plans/${ENVIRONMENT}"
+  env HELM_CACHE_HOME=/tmp/.cache terraform apply ".terraform/plans/${ENVIRONMENT}"
   EXIT_CODE=$?
   set -e
   rm -rf .terraform/plans/${ENVIRONMENT}
