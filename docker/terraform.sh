@@ -17,7 +17,7 @@ BACKEND_NAME="sa${ENVIRONMENT}${RG_LOCATION_SHORT}${SUFFIX}"
 CONTAINER_NAME="tfstate-${DIR}"
 ENVIRONMENT_FILE="/tmp/${ENVIRONMENT}.env"
 
-export HELM_CACHE_HOME=/tmp/.cache 
+export HELM_CACHE_HOME=/tmp/${DIR}/.helm_cache
 
 if [ -z "${OPA_BLAST_RADIUS}" ]; then
   OPA_BLAST_RADIUS=50
