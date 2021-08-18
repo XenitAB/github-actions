@@ -17,6 +17,8 @@ BACKEND_NAME="sa${ENVIRONMENT}${RG_LOCATION_SHORT}${SUFFIX}"
 CONTAINER_NAME="tfstate-${DIR}"
 ENVIRONMENT_FILE="/tmp/${ENVIRONMENT}.env"
 
+export HELM_CACHE_HOME=/tmp/.cache 
+
 if [ -z "${OPA_BLAST_RADIUS}" ]; then
   OPA_BLAST_RADIUS=50
 fi
@@ -76,7 +78,7 @@ apply () {
   sops --decrypt --azure-kv ${SOPS_KEY_ID} .terraform/plans/${ENVIRONMENT}.enc > .terraform/plans/${ENVIRONMENT}
   rm -rf .terraform/plans/${ENVIRONMENT}.enc
   set +e
-  env HELM_CACHE_HOME=/tmp/.cache terraform apply ".terraform/plans/${ENVIRONMENT}"
+  terraform apply ".terraform/plans/${ENVIRONMENT}"
   EXIT_CODE=$?
   set -e
   rm -rf .terraform/plans/${ENVIRONMENT}
