@@ -9,9 +9,6 @@ while [ $# -gt 0 ]; do
     --sha=*)
       SHA="${1#*=}"
       ;;
-    --user=*)
-      USER="${1#*=}"
-      ;;
     *)
       echo "Error: Invalid argument."
       exit 1
@@ -30,4 +27,4 @@ fi
 unzip tflint_linux_amd64.zip
 rm tflint_linux_amd64.zip
 mv tflint /usr/local/bin/tflint
-mkdir -p /home/${USER}/.tflint.d
+mkdir -p /work/.tflint.d

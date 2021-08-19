@@ -17,6 +17,8 @@ BACKEND_NAME="sa${ENVIRONMENT}${RG_LOCATION_SHORT}${SUFFIX}"
 CONTAINER_NAME="tfstate-${DIR}"
 ENVIRONMENT_FILE="/tmp/${ENVIRONMENT}.env"
 
+export HELM_CACHE_HOME=/tmp/${DIR}/.helm_cache
+
 if [ -z "${OPA_BLAST_RADIUS}" ]; then
   OPA_BLAST_RADIUS=50
 fi
@@ -150,7 +152,7 @@ validate () {
   terraform validate
   terraform fmt .
   terraform fmt variables/
-  tflint --config="/home/${USER}/.tflint.d/.tflint.hcl" --var-file="variables/${ENVIRONMENT}.tfvars" --var-file="variables/common.tfvars" --var-file="../global.tfvars" .
+  tflint --config="/work/.tflint.d/.tflint.hcl" --var-file="variables/${ENVIRONMENT}.tfvars" --var-file="variables/common.tfvars" --var-file="../global.tfvars" .
   tfsec .
 }
 
