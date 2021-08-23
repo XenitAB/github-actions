@@ -9,7 +9,7 @@ This repo builds a Docker image which collects tooling used to setup environment
 
 An example Makefile that makes use of this container might look like this:
 
-```
+```Makefile
 .ONESHELL:
 SHELL:=/bin/bash
 
