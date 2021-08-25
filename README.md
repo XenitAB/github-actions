@@ -29,9 +29,9 @@ ifndef DIR
 $(error Need to set DIR)
 endif
 
-AZURE_DIR_MOUNT:=$(shell echo "-v $(AZURE_CONFIG_DIR):/work/.azure")
-COMMAND:=$(shell echo "docker run --user $(shell id -u) $(TTY_OPTIONS) --entrypoint "/opt/terraform.sh" --env-file $(TEMP_ENV_FILE) $(AZURE_DIR_MOUNT) -v $${PWD}/$(DIR):/tmp/$(DIR) -v $${PWD}/global.tfvars:/tmp/global.tfvars $(IMAGE)")
-CLEANUP_COMMAND:=$(shell echo "$(MAKE) --no-print-directory teardown TEMP_ENV_FILE=$(TEMP_ENV_FILE)")
+AZURE_DIR_MOUNT:=-v $(AZURE_CONFIG_DIR):/work/.azure
+DOCKER_RUN:=docker run --user $(shell id -u) $(TTY_OPTIONS) --entrypoint /opt/terraform.sh --env-file $(TEMP_ENV_FILE) $(AZURE_DIR_MOUNT) -v $${PWD}/$(DIR):/tmp/$(DIR) -v $${PWD}/global.tfvars:/tmp/global.tfvars $(IMAGE)
+CLEANUP_COMMAND:=$(MAKE) --no-print-directory teardown TEMP_ENV_FILE=$(TEMP_ENV_FILE)
 
 .PHONY: setup
 .SILENT: setup
@@ -41,7 +41,7 @@ setup:
 	mkdir -p $(AZURE_CONFIG_DIR)
 	export AZURE_CONFIG_DIR="$(AZURE_CONFIG_DIR)"
 
-	if [ "$${CI}" == "true" ]; then
+	if [ -n "$${servicePrincipalId}" ]; then
 		echo ARM_CLIENT_ID=$${servicePrincipalId} >> $(TEMP_ENV_FILE)
 		echo ARM_CLIENT_SECRET=$${servicePrincipalKey} >> $(TEMP_ENV_FILE)
 		echo ARM_TENANT_ID=$${tenantId} >> $(TEMP_ENV_FILE)
@@ -50,17 +50,22 @@ setup:
 	echo ARM_SUBSCRIPTION_ID=$$(az account show -o tsv --query 'id') >> $(TEMP_ENV_FILE)
 
 	if [ "$(AWS_ENABLED)" == "true" ]; then
-		if [ "$${CI}" == "true" ]; then
+		if [ -z "$${AWS_ACCESS_KEY_ID}" ]; then
+			AWS_ROLE_ARN=$$(aws configure get role_arn)
+			aws sts assume-role --role-arn $${AWS_ROLE_ARN} --role-session-name awscli --output text --query 'Credentials' | \
+				{
+					read -r AWS_ACCESS_KEY_ID TIMESTAMP AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+					cat >> $(TEMP_ENV_FILE) <<EOF
+					AWS_ACCESS_KEY_ID=$${AWS_ACCESS_KEY_ID}
+					AWS_SECRET_ACCESS_KEY=$${AWS_SECRET_ACCESS_KEY}
+					AWS_SESSION_TOKEN=$${AWS_SESSION_TOKEN}
+					AWS_DEFAULT_REGION=$$(aws configure get region)
+					EOF
+				}
+		else
 			echo AWS_ACCESS_KEY_ID=$${AWS_ACCESS_KEY_ID} >> $(TEMP_ENV_FILE)
 			echo AWS_SECRET_ACCESS_KEY=$${AWS_SECRET_ACCESS_KEY} >> $(TEMP_ENV_FILE)
 			echo AWS_DEFAULT_REGION=$${AWS_DEFAULT_REGION} >> $(TEMP_ENV_FILE)
-		else
-			AWS_ROLE_ARN=$$(aws configure get role_arn)
-			AWS_VARS=$$(aws sts assume-role --role-arn $${AWS_ROLE_ARN} --role-session-name awscli --output json | grep -E "AccessKeyId|SecretAccessKey|SessionToken" | sed "s/[ |,|\"]//g")
-			echo AWS_ACCESS_KEY_ID=$$(echo "$${AWS_VARS}" | grep AccessKeyId | sed "s/AccessKeyId://g") >> $(TEMP_ENV_FILE)
-			echo AWS_SECRET_ACCESS_KEY=$$(echo "$${AWS_VARS}" | grep SecretAccessKey | sed "s/SecretAccessKey://g") >> $(TEMP_ENV_FILE)
-			echo AWS_SESSION_TOKEN=$$(echo "$${AWS_VARS}" | grep SessionToken | sed "s/SessionToken://g") >> $(TEMP_ENV_FILE)
-			echo AWS_DEFAULT_REGION=$$(aws configure get region) >> $(TEMP_ENV_FILE)
 		fi
 
 		echo AWS_DEFAULT_OUTPUT="json" >> $(TEMP_ENV_FILE)
@@ -75,32 +80,32 @@ teardown:
 .PHONY: prepare
 prepare: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(COMMAND) prepare $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) prepare $(DIR) $(ENV) $(SUFFIX)
 
 .PHONY: plan
 plan: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(COMMAND) plan $(DIR) $(ENV) $(SUFFIX) $(OPA_BLAST_RADIUS)
+	$(DOCKER_RUN) plan $(DIR) $(ENV) $(SUFFIX) $(OPA_BLAST_RADIUS)
 
 .PHONY: apply
 apply: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(COMMAND) apply $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) apply $(DIR) $(ENV) $(SUFFIX)
 
 .PHONY: destroy
 destroy: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(COMMAND) destroy $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) destroy $(DIR) $(ENV) $(SUFFIX)
 
 .PHONY: state-remove
 state-remove: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(COMMAND) state-remove $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) state-remove $(DIR) $(ENV) $(SUFFIX)
 
 .PHONY: validate
 validate: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(COMMAND) validate $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) validate $(DIR) $(ENV) $(SUFFIX)
 ```
 
 ## Building
