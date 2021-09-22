@@ -18,6 +18,8 @@ IMAGE="ghcr.io/xenitab/github-actions/tools:[tag]"
 AWS_ENABLED:=false
 
 OPA_BLAST_RADIUS := $(if $(OPA_BLAST_RADIUS),$(OPA_BLAST_RADIUS),50)
+RG_LOCATION_SHORT := $(if $(RG_LOCATION_SHORT),$(RG_LOCATION_SHORT),we)
+RG_LOCATION_LONG := $(if $(RG_LOCATION_LONG),$(RG_LOCATION_LONG),westeurope)
 AZURE_CONFIG_DIR := $(if $(AZURE_CONFIG_DIR),$(AZURE_CONFIG_DIR),"$${HOME}/.azure")
 TTY_OPTIONS=$(shell [ -t 0 ] && echo '-it')
 TEMP_ENV_FILE:=$(shell mktemp)
@@ -80,32 +82,32 @@ teardown:
 .PHONY: prepare
 prepare: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) prepare $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) prepare $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
 
 .PHONY: plan
 plan: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) plan $(DIR) $(ENV) $(SUFFIX) $(OPA_BLAST_RADIUS)
+	$(DOCKER_RUN) plan $(DIR) $(ENV) $(SUFFIX) $(OPA_BLAST_RADIUS) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
 
 .PHONY: apply
 apply: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) apply $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) apply $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
 
 .PHONY: destroy
 destroy: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) destroy $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) destroy $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
 
 .PHONY: state-remove
 state-remove: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) state-remove $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) state-remove $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
 
 .PHONY: validate
 validate: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) validate $(DIR) $(ENV) $(SUFFIX)
+	$(DOCKER_RUN) validate $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
 ```
 
 ## Building
