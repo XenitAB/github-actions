@@ -18,6 +18,8 @@ IMAGE="ghcr.io/xenitab/github-actions/tools:[tag]"
 AWS_ENABLED:=false
 
 OPA_BLAST_RADIUS := $(if $(OPA_BLAST_RADIUS),$(OPA_BLAST_RADIUS),50)
+RG_LOCATION_SHORT:=we
+RG_LOCATION_LONG:=westeurope
 AZURE_CONFIG_DIR := $(if $(AZURE_CONFIG_DIR),$(AZURE_CONFIG_DIR),"$${HOME}/.azure")
 TTY_OPTIONS=$(shell [ -t 0 ] && echo '-it')
 TEMP_ENV_FILE:=$(shell mktemp)
@@ -30,7 +32,7 @@ $(error Need to set DIR)
 endif
 
 AZURE_DIR_MOUNT:=-v $(AZURE_CONFIG_DIR):/work/.azure
-DOCKER_RUN:=docker run --user $(shell id -u) $(TTY_OPTIONS) --entrypoint /opt/terraform.sh --env-file $(TEMP_ENV_FILE) $(AZURE_DIR_MOUNT) -v $${PWD}/$(DIR):/tmp/$(DIR) -v $${PWD}/global.tfvars:/tmp/global.tfvars $(IMAGE)
+DOCKER_RUN:=docker run --user $(shell id -u) $(TTY_OPTIONS) --rm --entrypoint /opt/terraform.sh --env-file $(TEMP_ENV_FILE) $(AZURE_DIR_MOUNT) -v $${PWD}/$(DIR):/tmp/$(DIR) -v $${PWD}/global.tfvars:/tmp/global.tfvars $(IMAGE)
 CLEANUP_COMMAND:=$(MAKE) --no-print-directory teardown TEMP_ENV_FILE=$(TEMP_ENV_FILE)
 
 .PHONY: setup
@@ -71,6 +73,9 @@ setup:
 		echo AWS_DEFAULT_OUTPUT="json" >> $(TEMP_ENV_FILE)
 		echo AWS_PAGER= >> $(TEMP_ENV_FILE)
 	fi
+
+	echo RG_LOCATION_SHORT=$(RG_LOCATION_SHORT) >> $(TEMP_ENV_FILE)
+	echo RG_LOCATION_LONG=$(RG_LOCATION_LONG) >> $(TEMP_ENV_FILE)
 
 .PHONY: teardown
 .SILENT: teardown
@@ -122,7 +127,7 @@ In order to push a new image to the container registry, you create a new release
 
 If you need to push a custom image to the registry, you need to go to your GitHub [personal access tokens](https://github.com/settings/tokens) page and create an access token. That token is your password when logging in:
 
-```
+```shell
 docker login ghcr.io --username <GITHUB_USERNAME>
 docker build -t ghcr.io/xenitab/github-actions/tools:<TAG> ./docker
 docker push ghcr.io/xenitab/github-actions/tools:<TAG>

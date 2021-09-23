@@ -7,15 +7,14 @@ ENVIRONMENT=$3
 SUFFIX=$4
 OPA_BLAST_RADIUS=$5
 
-RG_LOCATION_SHORT="we"
-RG_LOCATION_LONG="westeurope"
+RG_LOCATION_SHORT=${RG_LOCATION_SHORT:-we}
+RG_LOCATION_LONG=${RG_LOCATION_LONG:-westeurope}
 BACKEND_KEY="${ENVIRONMENT}.terraform.tfstate"
 BACKEND_RG="rg-${ENVIRONMENT}-${RG_LOCATION_SHORT}-${SUFFIX}"
 BACKEND_KV="kv-${ENVIRONMENT}-${RG_LOCATION_SHORT}-${SUFFIX}"
 BACKEND_KV_KEY="sops"
 BACKEND_NAME="sa${ENVIRONMENT}${RG_LOCATION_SHORT}${SUFFIX}"
 CONTAINER_NAME="tfstate-${DIR}"
-ENVIRONMENT_FILE="/tmp/${ENVIRONMENT}.env"
 
 export HELM_CACHE_HOME=/tmp/${DIR}/.helm_cache
 
@@ -88,11 +87,11 @@ apply () {
 destroy () {
   terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
   terraform workspace select ${ENVIRONMENT}
-  
+
   echo "-------"
   echo "You are about to run terraform destroy on ${DIR} in ${ENVIRONMENT}"
   echo "-------"
-  
+
   echo -n "Please confirm by writing \"${DIR}/${ENVIRONMENT}\": "
   read VERIFICATION_INPUT
 
@@ -108,11 +107,11 @@ state_remove () {
   terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
   terraform workspace select ${ENVIRONMENT}
   TF_STATE_OBJECTS=$(terraform state list)
-  
+
   echo "-------"
   echo "You are about to run terraform state rm on ${DIR} in ${ENVIRONMENT}"
   echo "-------"
-  
+
   echo -n "Please confirm by writing \"${DIR}/${ENVIRONMENT}\": "
   read VERIFICATION_INPUT
 
@@ -122,7 +121,7 @@ state_remove () {
     GREP_ARGUMENT=${GREP_ARGUMENT:-.*}
     TF_STATE_TO_REMOVE=$(echo "${TF_STATE_OBJECTS}" | grep -E "${GREP_ARGUMENT}")
     TF_STATE_TO_REMOVE_COUNT=$(echo "${TF_STATE_TO_REMOVE}" | wc -l)
-    
+
     echo "You are about to remove the following objects from the terraform state: "
     echo ""
     echo "-------"
@@ -157,24 +156,15 @@ validate () {
 }
 
 select_workspace() {
-  set +e 
-  terraform workspace select ${ENVIRONMENT} 2> /dev/null 
-  if [ $? -ne 0 ]; then 
-    terraform workspace new ${ENVIRONMENT} 
-    terraform workspace select ${ENVIRONMENT} 
-  fi 
-  set -e 
-}
-
-envup() {
-  if [ -f ${ENVIRONMENT_FILE} ]; then
-    set -a
-    source ${ENVIRONMENT_FILE}
-    set +a
+  set +e
+  terraform workspace select ${ENVIRONMENT} 2> /dev/null
+  if [ $? -ne 0 ]; then
+    terraform workspace new ${ENVIRONMENT}
+    terraform workspace select ${ENVIRONMENT}
   fi
+  set -e
 }
 
-envup
 cd /tmp/$DIR
 
 case $ACTION in
