@@ -32,7 +32,7 @@ $(error Need to set DIR)
 endif
 
 AZURE_DIR_MOUNT:=-v $(AZURE_CONFIG_DIR):/work/.azure
-DOCKER_RUN:=docker run --user $(shell id -u) $(TTY_OPTIONS) --entrypoint /opt/terraform.sh --env-file $(TEMP_ENV_FILE) $(AZURE_DIR_MOUNT) -v $${PWD}/$(DIR):/tmp/$(DIR) -v $${PWD}/global.tfvars:/tmp/global.tfvars $(IMAGE)
+DOCKER_RUN:=docker run --user $(shell id -u) $(TTY_OPTIONS) --rm --entrypoint /opt/terraform.sh --env-file $(TEMP_ENV_FILE) $(AZURE_DIR_MOUNT) -v $${PWD}/$(DIR):/tmp/$(DIR) -v $${PWD}/global.tfvars:/tmp/global.tfvars $(IMAGE)
 CLEANUP_COMMAND:=$(MAKE) --no-print-directory teardown TEMP_ENV_FILE=$(TEMP_ENV_FILE)
 
 .PHONY: setup

@@ -15,7 +15,6 @@ BACKEND_KV="kv-${ENVIRONMENT}-${RG_LOCATION_SHORT}-${SUFFIX}"
 BACKEND_KV_KEY="sops"
 BACKEND_NAME="sa${ENVIRONMENT}${RG_LOCATION_SHORT}${SUFFIX}"
 CONTAINER_NAME="tfstate-${DIR}"
-ENVIRONMENT_FILE="/tmp/${ENVIRONMENT}.env"
 
 export HELM_CACHE_HOME=/tmp/${DIR}/.helm_cache
 
@@ -166,15 +165,6 @@ select_workspace() {
   set -e
 }
 
-envup() {
-  if [ -f ${ENVIRONMENT_FILE} ]; then
-    set -a
-    source ${ENVIRONMENT_FILE}
-    set +a
-  fi
-}
-
-envup
 cd /tmp/$DIR
 
 case $ACTION in
