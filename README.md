@@ -18,8 +18,8 @@ IMAGE="ghcr.io/xenitab/github-actions/tools:[tag]"
 AWS_ENABLED:=false
 
 OPA_BLAST_RADIUS := $(if $(OPA_BLAST_RADIUS),$(OPA_BLAST_RADIUS),50)
-RG_LOCATION_SHORT := $(if $(RG_LOCATION_SHORT),$(RG_LOCATION_SHORT),we)
-RG_LOCATION_LONG := $(if $(RG_LOCATION_LONG),$(RG_LOCATION_LONG),westeurope)
+RG_LOCATION_SHORT:=we
+RG_LOCATION_LONG:=westeurope
 AZURE_CONFIG_DIR := $(if $(AZURE_CONFIG_DIR),$(AZURE_CONFIG_DIR),"$${HOME}/.azure")
 TTY_OPTIONS=$(shell [ -t 0 ] && echo '-it')
 TEMP_ENV_FILE:=$(shell mktemp)
@@ -74,6 +74,9 @@ setup:
 		echo AWS_PAGER= >> $(TEMP_ENV_FILE)
 	fi
 
+	echo "RG_LOCATION_SHORT=$(RG_LOCATION_SHORT)" >> $(TEMP_ENV_FILE)
+	echo "RG_LOCATION_LONG=$(RG_LOCATION_LONG)" >> $(TEMP_ENV_FILE)
+
 .PHONY: teardown
 .SILENT: teardown
 teardown:
@@ -82,32 +85,32 @@ teardown:
 .PHONY: prepare
 prepare: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) prepare $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
+	$(DOCKER_RUN) prepare $(DIR) $(ENV) $(SUFFIX)
 
 .PHONY: plan
 plan: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) plan $(DIR) $(ENV) $(SUFFIX) $(OPA_BLAST_RADIUS) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
+	$(DOCKER_RUN) plan $(DIR) $(ENV) $(SUFFIX) $(OPA_BLAST_RADIUS)
 
 .PHONY: apply
 apply: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) apply $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
+	$(DOCKER_RUN) apply $(DIR) $(ENV) $(SUFFIX)
 
 .PHONY: destroy
 destroy: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) destroy $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
+	$(DOCKER_RUN) destroy $(DIR) $(ENV) $(SUFFIX)
 
 .PHONY: state-remove
 state-remove: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) state-remove $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
+	$(DOCKER_RUN) state-remove $(DIR) $(ENV) $(SUFFIX)
 
 .PHONY: validate
 validate: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
-	$(DOCKER_RUN) validate $(DIR) $(ENV) $(SUFFIX) $(RG_LOCATION_SHORT) $(RG_LOCATION_LONG)
+	$(DOCKER_RUN) validate $(DIR) $(ENV) $(SUFFIX)
 ```
 
 ## Building
@@ -124,7 +127,7 @@ In order to push a new image to the container registry, you create a new release
 
 If you need to push a custom image to the registry, you need to go to your GitHub [personal access tokens](https://github.com/settings/tokens) page and create an access token. That token is your password when logging in:
 
-```
+```shell
 docker login ghcr.io --username <GITHUB_USERNAME>
 docker build -t ghcr.io/xenitab/github-actions/tools:<TAG> ./docker
 docker push ghcr.io/xenitab/github-actions/tools:<TAG>
