@@ -22,7 +22,7 @@ RUN /usr/src/install-scripts/base.sh
 
 # Install Azure CLI
 COPY install-scripts/azure-cli.sh /usr/src/install-scripts/azure-cli.sh
-RUN /usr/src/install-scripts/azure-cli.sh --version="2.15.1"
+RUN /usr/src/install-scripts/azure-cli.sh --version="2.30.0"
 
 # Install AWS CLI
 COPY install-scripts/aws-cli.sh /usr/src/install-scripts/aws-cli.sh
