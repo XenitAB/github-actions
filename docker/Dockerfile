@@ -7,14 +7,16 @@ COPY ./go-tf-prepare/main.go main.go
 COPY ./go-tf-prepare/pkg/ pkg/
 RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
 
-FROM alpine:3.12.1
+#FROM alpine:3.12.1
+FROM debian:bullseye-slim
+# 11.1-slim
 
 RUN mkdir -p /tmp/install /usr/src /work
 WORKDIR /tmp/install
 
 # libc6-compat is needed to load local terraform providers
-RUN apk update && \
-    apk add bash libc6-compat
+RUN apt update && \
+    apt install -y bash libc6
 
 # Base should always be first
 COPY install-scripts/base.sh /usr/src/install-scripts/base.sh

@@ -1,4 +1,4 @@
 #!/bin/bash
 set -e
 
-apk del --purge build
+apt-get autoremove

@@ -44,6 +44,7 @@ prepare () {
 }
 
 plan () {
+  set -x
   rm -f .terraform/plans/${ENVIRONMENT}
   terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
 

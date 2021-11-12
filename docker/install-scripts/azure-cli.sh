@@ -13,6 +13,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-pip --no-cache-dir install azure-cli==${VERSION}
+#pip --no-cache-dir install azure-cli==${VERSION}
+curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 az extension add --name azure-devops
 az extension add --name managementpartner
