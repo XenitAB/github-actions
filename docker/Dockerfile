@@ -7,17 +7,17 @@ COPY ./go-tf-prepare/main.go main.go
 COPY ./go-tf-prepare/pkg/ pkg/
 RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
 
-FROM debian:bullseye-slim
-# 11.1-slim
+FROM debian:11-slim
 
 #Base
 RUN apt update && \
     apt install -y git curl openssl && \
     apt install -y pip && \
     apt install -y gcc libffi-dev libssl-dev python3-dev make unzip wget && \
-    pip --no-cache-dir install -U pip && \
-    apt-get install ansible && \
-    apt-get install packer
+    apt-get install ansible=2.10.7+merged+base+2.10.8+dfsg-1 && \
+    apt-get install packer=1.6.6+ds1-2+b3
+
+RUN pip --no-cache-dir install -U pip
 
 RUN mkdir -p /tmp/install /usr/src /work
 WORKDIR /tmp/install
