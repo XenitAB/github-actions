@@ -13,7 +13,12 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-#pip --no-cache-dir install azure-cli==${VERSION}
-curl -sL https://aka.ms/InstallAzureCLIDeb | bash
-az extension add --name azure-devops
-az extension add --name managementpartner
+curl -sL https://packages.microsoft.com/keys/microsoft.asc |
+    gpg --dearmor |
+    tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
+
+    AZ_REPO=$(lsb_release -cs)
+echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" |
+    tee /etc/apt/sources.list.d/azure-cli.list
+
+  apt-get install azure-cli=${VERSION}-1~bullseye
