@@ -7,7 +7,7 @@ COPY ./go-tf-prepare/main.go main.go
 COPY ./go-tf-prepare/pkg/ pkg/
 RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
 
-FROM debian:bullseye-slim
+FROM debian:11.1-slim
 
 #Base
 RUN apt update -y && \
