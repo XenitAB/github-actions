@@ -79,6 +79,7 @@ RUN /usr/src/install-scripts/helm.sh --version="v3.4.1" --sha="538f85b4b73ac6160
 COPY --from=tf-prepare-builder /workspace/tf-prepare /usr/local/bin/tf-prepare
 RUN chmod +x /usr/local/bin/tf-prepare
 
+#Cleanup
 RUN apt-get autoremove && \
     apt-get clean
 
