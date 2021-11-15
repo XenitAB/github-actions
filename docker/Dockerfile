@@ -13,7 +13,7 @@ FROM debian:11.1-slim
 RUN apt update -y && \
     apt install -y git curl openssl && \
     apt install -y pip && \
-    apt install -y gcc libffi-dev libssl-dev python3-dev make unzip gpg wget && \
+    apt install -y make unzip gpg wget && \
     apt-get install -y ansible=2.10.7+merged+base+2.10.8+dfsg-1 && \
     apt-get install -y packer=1.6.6+ds1-2+b3
 
