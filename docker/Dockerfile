@@ -7,18 +7,18 @@ COPY ./go-tf-prepare/main.go main.go
 COPY ./go-tf-prepare/pkg/ pkg/
 RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
 
-FROM alpine:3.12.1
+FROM debian:11.1-slim
+
+#Base
+RUN apt-get update -y && \
+    apt-get install -y git curl openssl pip make unzip gpg wget && \
+    apt-get install -y ansible=2.10.7+merged+base+2.10.8+dfsg-1 && \
+    apt-get install -y packer=1.6.6+ds1-2+b3
+
+RUN pip --no-cache-dir install -U pip
 
 RUN mkdir -p /tmp/install /usr/src /work
 WORKDIR /tmp/install
-
-# libc6-compat is needed to load local terraform providers
-RUN apk update && \
-    apk add bash libc6-compat
-
-# Base should always be first
-COPY install-scripts/base.sh /usr/src/install-scripts/base.sh
-RUN /usr/src/install-scripts/base.sh
 
 # Install Azure CLI
 COPY install-scripts/azure-cli.sh /usr/src/install-scripts/azure-cli.sh
@@ -27,14 +27,6 @@ RUN /usr/src/install-scripts/azure-cli.sh --version="2.30.0"
 # Install AWS CLI
 COPY install-scripts/aws-cli.sh /usr/src/install-scripts/aws-cli.sh
 RUN /usr/src/install-scripts/aws-cli.sh --version="2.1.10"
-
-# Install Ansible
-COPY install-scripts/ansible.sh /usr/src/install-scripts/ansible.sh
-RUN /usr/src/install-scripts/ansible.sh --version="2.10.3"
-
-# Install Packer
-COPY install-scripts/packer.sh /usr/src/install-scripts/packer.sh
-RUN /usr/src/install-scripts/packer.sh --version="1.6.5" --sha="a49f6408a50c220fe3f1a6192ea21134e2e8f31092c507614cd27ad4f913234b"
 
 # Install tflint
 COPY install-scripts/tflint.sh /usr/src/install-scripts/tflint.sh
@@ -82,12 +74,12 @@ RUN /usr/src/install-scripts/kubectl.sh --version="v1.19.0" --sha="79bb0d2f05487
 COPY install-scripts/helm.sh /usr/src/install-scripts/helm.sh
 RUN /usr/src/install-scripts/helm.sh --version="v3.4.1" --sha="538f85b4b73ac6160b30fd0ab4b510441aa3fa326593466e8bf7084a9c288420"
 
-# Cleanup should always be last
-COPY install-scripts/cleanup.sh /usr/src/install-scripts/cleanup.sh
-RUN /usr/src/install-scripts/cleanup.sh
-
 COPY --from=tf-prepare-builder /workspace/tf-prepare /usr/local/bin/tf-prepare
 RUN chmod +x /usr/local/bin/tf-prepare
+
+#Cleanup
+RUN apt-get autoremove && \
+    apt-get clean
 
 RUN rm -rf /tmp/install
 
