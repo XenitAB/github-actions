@@ -10,10 +10,8 @@ RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
 FROM debian:11.1-slim
 
 #Base
-RUN apt update -y && \
-    apt install -y git curl openssl && \
-    apt install -y pip && \
-    apt install -y make unzip gpg wget && \
+RUN apt-get update -y && \
+    apt-get install -y git curl openssl pip make unzip gpg wget && \
     apt-get install -y ansible=2.10.7+merged+base+2.10.8+dfsg-1 && \
     apt-get install -y packer=1.6.6+ds1-2+b3
 
