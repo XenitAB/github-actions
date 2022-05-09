@@ -21,6 +21,7 @@ weights = {
     "azuread_group": {"delete": 100, "create": 1, "modify": 1},
     "azurerm_container_registry": {"delete": 100, "create": 1, "modify": 1},
     "azurerm_kubernetes_cluster": {"delete": 100, "create": 1, "modify": 1},
+    "azurerm_resource_group": {"delete": 200, "create": 1, "modify": 1},
     "azurerm_storage_account": {"delete": 100, "create": 1, "modify": 1},
     "azurerm_virtual_network": {"delete": 100, "create": 1, "modify": 1},
     "azurerm_virtual_machine": {"delete": 100, "create": 1, "modify": 1},
