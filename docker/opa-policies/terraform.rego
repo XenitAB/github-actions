@@ -35,6 +35,10 @@ weights = {
 }
 
 resource_types = { r | weights[r] }
+other_resource_types[type] {
+    type := tfplan.resource_changes[_].type
+    not resource_types[type]
+}
 
 #########
 # Policy
@@ -57,7 +61,15 @@ score = s {
             mod := crud["modify"] * num_modifies[resource_type];
             x := del + new + mod
     ]
-    s := sum(all)
+    others := [ x |
+            some resource_type
+            crud := {"delete": 100, "create": 1, "modify": 1};
+            del := crud["delete"] * other_num_deletes[resource_type];
+            new := crud["create"] * other_num_creates[resource_type];
+            mod := crud["modify"] * other_num_modifies[resource_type];
+            x := del + new + mod
+    ]
+    s := sum(all) + sum(others)
 }
 
 # Whether there is any change to IAM
@@ -80,6 +92,15 @@ resources[resource_type] = all {
     ]
 }
 
+other_resources[resource_type] := all {
+    some resource_type
+    other_resource_types[resource_type]
+    all := [name |
+        name:= tfplan.resource_changes[_]
+        name.type == resource_type
+    ]
+}
+
 # number of creations of resources of a given type
 num_creates[resource_type] = num {
     some resource_type
@@ -89,6 +110,13 @@ num_creates[resource_type] = num {
     num := count(creates)
 }
 
+other_num_creates[resource_type] := num {
+    some resource_type
+    other_resource_types[resource_type]
+    all := other_resources[resource_type]
+    creates := [res |  res:= all[_]; res.change.actions[_] == "create"]
+    num := count(creates)
+}
 
 # number of deletions of resources of a given type
 num_deletes[resource_type] = num {
@@ -99,11 +127,27 @@ num_deletes[resource_type] = num {
     num := count(deletions)
 }
 
+other_num_deletes[resource_type] := num {
+    some resource_type
+    other_resource_types[resource_type]
+    all := other_resources[resource_type]
+    deletions := [res |  res:= all[_]; res.change.actions[_] == "delete"]
+    num := count(deletions)
+}
+
 # number of modifications to resources of a given type
 num_modifies[resource_type] = num {
     some resource_type
     resource_types[resource_type]
     all := resources[resource_type]
+    modifies := [res |  res:= all[_]; res.change.actions[_] == "update"]
+    num := count(modifies)
+}
+
+other_num_modifies[resource_type] := num {
+    some resource_type
+    other_resource_types[resource_type]
+    all := other_resources[resource_type]
     modifies := [res |  res:= all[_]; res.change.actions[_] == "update"]
     num := count(modifies)
 }
