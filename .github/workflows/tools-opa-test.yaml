@@ -1,0 +1,16 @@
+name: Run OPA Tests
+on: [push]
+jobs:
+  Run-OPA-Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      - name: Setup OPA
+        uses: open-policy-agent/setup-opa@v1
+        with:
+          version: latest
+
+      - name: Run OPA Tests
+        run: opa test docker/opa-policies/ -v
