@@ -48,7 +48,7 @@ RUN /usr/src/install-scripts/tfsec.sh --version="v1.8.0" --sha="6f0ffcc204a73991
 
 # Install Open Policy Agent
 COPY install-scripts/opa.sh /usr/src/install-scripts/opa.sh
-RUN /usr/src/install-scripts/opa.sh --version="v0.24.0" --sha="e40bde4cca8a5819518e3c35862bc5b6c388bc2904d412227059af29170f79e9"
+RUN /usr/src/install-scripts/opa.sh --version="v0.40.0" --sha="fc77b0fd2efffb60f0d65d22c251b780c15a8e298d5034f41439a7f3d3183f97"
 
 # Install sops
 COPY install-scripts/sops.sh /usr/src/install-scripts/sops.sh
