@@ -83,7 +83,7 @@ score = s {
 ####################
 
 # list of all resources of a given type
-resources[resource_type] = all {
+resources[resource_type] := all {
     some resource_type
     resource_types[resource_type]
     all := [name |
@@ -92,7 +92,7 @@ resources[resource_type] = all {
     ]
 }
 
-other_resources[resource_type] = all {
+other_resources[resource_type] := all {
     some resource_type
     other_resource_types[resource_type]
     all := [name |
@@ -102,7 +102,7 @@ other_resources[resource_type] = all {
 }
 
 # number of creations of resources of a given type
-num_creates[resource_type] = num {
+num_creates[resource_type] := num {
     some resource_type
     resource_types[resource_type]
     all := resources[resource_type]
@@ -110,7 +110,7 @@ num_creates[resource_type] = num {
     num := count(creates)
 }
 
-other_num_creates[resource_type] = num {
+other_num_creates[resource_type] := num {
     some resource_type
     other_resource_types[resource_type]
     all := other_resources[resource_type]
@@ -119,7 +119,7 @@ other_num_creates[resource_type] = num {
 }
 
 # number of deletions of resources of a given type
-num_deletes[resource_type] = num {
+num_deletes[resource_type] := num {
     some resource_type
     resource_types[resource_type]
     all := resources[resource_type]
@@ -127,7 +127,7 @@ num_deletes[resource_type] = num {
     num := count(deletions)
 }
 
-other_num_deletes[resource_type] = num {
+other_num_deletes[resource_type] := num {
     some resource_type
     other_resource_types[resource_type]
     all := other_resources[resource_type]
@@ -136,7 +136,7 @@ other_num_deletes[resource_type] = num {
 }
 
 # number of modifications to resources of a given type
-num_modifies[resource_type] = num {
+num_modifies[resource_type] := num {
     some resource_type
     resource_types[resource_type]
     all := resources[resource_type]
@@ -144,7 +144,7 @@ num_modifies[resource_type] = num {
     num := count(modifies)
 }
 
-other_num_modifies[resource_type] = num {
+other_num_modifies[resource_type] := num {
     some resource_type
     other_resource_types[resource_type]
     all := other_resources[resource_type]
