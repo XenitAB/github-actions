@@ -10,7 +10,7 @@ jobs:
       - name: Setup OPA
         uses: open-policy-agent/setup-opa@v1
         with:
-          version: latest
+          version: 0.40.0
 
       - name: Run OPA Tests
         run: opa test docker/opa-policies/ -v
