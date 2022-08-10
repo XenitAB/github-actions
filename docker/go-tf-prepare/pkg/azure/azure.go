@@ -3,47 +3,49 @@ package azure
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/arm/keyvault/2019-09-01/armkeyvault"
-	"github.com/Azure/azure-sdk-for-go/sdk/arm/resources/2020-06-01/armresources"
-	"github.com/Azure/azure-sdk-for-go/sdk/arm/storage/2019-06-01/armstorage"
-	"github.com/Azure/azure-sdk-for-go/sdk/armcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/to"
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-09-01/locks"
-	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armlocks"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/go-logr/logr"
-	"github.com/jongio/azidext/go/azidext"
+
+	adapter "github.com/microsoft/kiota-authentication-azure-go"
+	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
 )
 
 // CreateResourceGroup creates Azure Resource Group (if it doesn't exist) or returns error
-func CreateResourceGroup(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+func CreateResourceGroup(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
 	resourceGroupName := config.ResourceGroupName
 	resourceGroupLocation := config.ResourceGroupLocation
 	subscriptionID := config.SubscriptionID
 
-	log := logr.FromContext(ctx)
-
-	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
+	log, err := logr.FromContext(ctx)
 	if err != nil {
-		log.Error(err, "azidentity.NewDefaultAzureCredential")
 		return err
 	}
 
-	client := armresources.NewResourceGroupsClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
-	resourceGroupExists, err := client.CheckExistence(ctx, resourceGroupName, &armresources.ResourceGroupsCheckExistenceOptions{})
+	client, err := armresources.NewResourceGroupsClient(subscriptionID, cred, &arm.ClientOptions{})
+	if err != nil {
+		log.Error(err, "armresources.NewResourceGroupsClient")
+		return err
+	}
+	resourceGroupExists, err := client.CheckExistence(ctx, resourceGroupName, &armresources.ResourceGroupsClientCheckExistenceOptions{})
 	if err != nil {
 		log.Error(err, "client.CheckExistence")
 		return err
 	}
 	if !resourceGroupExists.Success {
 		_, err = client.CreateOrUpdate(ctx, resourceGroupName, armresources.ResourceGroup{
-			Location: to.StringPtr(resourceGroupLocation),
+			Location: to.Ptr(resourceGroupLocation),
 		}, nil)
 		if err != nil {
 			log.Error(err, "client.CreateOrUpdate")
@@ -59,20 +61,21 @@ func CreateResourceGroup(ctx context.Context, config azureConfig) error {
 }
 
 // CreateStorageAccount creates Azure Storage Account (if it doesn't exist) or returns error
-func CreateStorageAccount(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+func CreateStorageAccount(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
 	resourceGroupName := config.ResourceGroupName
 	resourceGroupLocation := config.ResourceGroupLocation
 	storageAccountName := config.StorageAccountName
 	subscriptionID := config.SubscriptionID
-	log := logr.FromContext(ctx)
-
-	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
+	log, err := logr.FromContext(ctx)
 	if err != nil {
-		log.Error(err, "azidentity.NewDefaultAzureCredential")
 		return err
 	}
-	client := armstorage.NewStorageAccountsClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
+
+	client, err := armstorage.NewAccountsClient(subscriptionID, cred, &arm.ClientOptions{})
+	if err != nil {
+		log.Error(err, "armstorage.NewAccountsClient")
+		return err
+	}
 	_, err = client.GetProperties(ctx, resourceGroupName, storageAccountName, nil)
 
 	if err == nil {
@@ -83,9 +86,9 @@ func CreateStorageAccount(ctx context.Context, config azureConfig) error {
 	if err != nil && strings.Contains(err.Error(), "ResourceNotFound") {
 		res, err := client.CheckNameAvailability(
 			ctx,
-			armstorage.StorageAccountCheckNameAvailabilityParameters{
-				Name: to.StringPtr(storageAccountName),
-				Type: to.StringPtr("Microsoft.Storage/storageAccounts"),
+			armstorage.AccountCheckNameAvailabilityParameters{
+				Name: to.Ptr(storageAccountName),
+				Type: to.Ptr("Microsoft.Storage/storageAccounts"),
 			},
 			nil)
 
@@ -104,17 +107,17 @@ func CreateStorageAccount(ctx context.Context, config azureConfig) error {
 			ctx,
 			resourceGroupName,
 			storageAccountName,
-			armstorage.StorageAccountCreateParameters{
+			armstorage.AccountCreateParameters{
 				SKU: &armstorage.SKU{
-					Name: armstorage.SKUNameStandardGrs.ToPtr(),
-					Tier: armstorage.SKUTierStandard.ToPtr(),
+					Name: to.Ptr(armstorage.SKUNameStandardGRS),
+					Tier: to.Ptr(armstorage.SKUTierStandard),
 				},
-				Kind:     armstorage.KindStorageV2.ToPtr(),
-				Location: to.StringPtr(resourceGroupLocation),
-				Properties: &armstorage.StorageAccountPropertiesCreateParameters{
-					AccessTier:            armstorage.AccessTierHot.ToPtr(),
-					AllowBlobPublicAccess: to.BoolPtr(false),
-					MinimumTLSVersion:     armstorage.MinimumTLSVersionTLS12.ToPtr(),
+				Kind:     to.Ptr(armstorage.KindStorageV2),
+				Location: to.Ptr(resourceGroupLocation),
+				Properties: &armstorage.AccountPropertiesCreateParameters{
+					AccessTier:            to.Ptr(armstorage.AccessTierHot),
+					AllowBlobPublicAccess: to.Ptr(false),
+					MinimumTLSVersion:     to.Ptr(armstorage.MinimumTLSVersionTLS12),
 				},
 			}, nil)
 
@@ -123,7 +126,9 @@ func CreateStorageAccount(ctx context.Context, config azureConfig) error {
 			return err
 		}
 
-		_, err = poller.PollUntilDone(ctx, 30*time.Second)
+		_, err = poller.PollUntilDone(ctx, &runtime.PollUntilDoneOptions{
+			Frequency: 30 * time.Second,
+		})
 		if err != nil {
 			log.Error(err, "poller.PollUntilDone")
 			return err
@@ -138,20 +143,21 @@ func CreateStorageAccount(ctx context.Context, config azureConfig) error {
 }
 
 // CreateStorageAccountContainer creates Storage Account Container (if it doesn't exist) or returns error
-func CreateStorageAccountContainer(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+func CreateStorageAccountContainer(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
 	resourceGroupName := config.ResourceGroupName
 	storageAccountName := config.StorageAccountName
 	storageAccountContainer := config.StorageAccountContainer
 	subscriptionID := config.SubscriptionID
-	log := logr.FromContext(ctx)
-
-	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
+	log, err := logr.FromContext(ctx)
 	if err != nil {
-		log.Error(err, "azidentity.NewDefaultAzureCredential")
 		return err
 	}
-	client := armstorage.NewBlobContainersClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
+
+	client, err := armstorage.NewBlobContainersClient(subscriptionID, cred, &arm.ClientOptions{})
+	if err != nil {
+		log.Error(err, "armstorage.NewBlobContainersClient")
+		return err
+	}
 	_, err = client.Get(
 		ctx,
 		resourceGroupName,
@@ -185,21 +191,21 @@ func CreateStorageAccountContainer(ctx context.Context, config azureConfig) erro
 }
 
 // CreateKeyVault creates Azure Key Vault (if it doesn't exist) or returns error
-func CreateKeyVault(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+func CreateKeyVault(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
 	resourceGroupName := config.ResourceGroupName
 	resourceGroupLocation := config.ResourceGroupLocation
 	keyVaultName := config.KeyVaultName
 	subscriptionID := config.SubscriptionID
 	tenantID := config.TenantID
-	log := logr.FromContext(ctx)
-
-	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
+	log, err := logr.FromContext(ctx)
 	if err != nil {
-		log.Error(err, "azidentity.NewDefaultAzureCredential")
 		return err
 	}
-	client := armkeyvault.NewVaultsClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
+
+	client, err := armkeyvault.NewVaultsClient(subscriptionID, cred, &arm.ClientOptions{})
+	if err != nil {
+		return err
+	}
 
 	_, err = client.Get(ctx, resourceGroupName, keyVaultName, nil)
 	if err == nil {
@@ -208,7 +214,7 @@ func CreateKeyVault(ctx context.Context, config azureConfig) error {
 	}
 
 	if err != nil && strings.Contains(err.Error(), "ResourceNotFound") {
-		keyVaultNameAvailable, err := client.CheckNameAvailability(ctx, armkeyvault.VaultCheckNameAvailabilityParameters{Name: to.StringPtr(keyVaultName), Type: to.StringPtr("Microsoft.KeyVault/vaults")}, nil)
+		keyVaultNameAvailable, err := client.CheckNameAvailability(ctx, armkeyvault.VaultCheckNameAvailabilityParameters{Name: to.Ptr(keyVaultName), Type: to.Ptr("Microsoft.KeyVault/vaults")}, nil)
 		if err != nil {
 			log.Error(err, "client.CheckNameAvailability")
 			return err
@@ -224,21 +230,23 @@ func CreateKeyVault(ctx context.Context, config azureConfig) error {
 			resourceGroupName,
 			keyVaultName,
 			armkeyvault.VaultCreateOrUpdateParameters{
-				Location: to.StringPtr(resourceGroupLocation),
+				Location: to.Ptr(resourceGroupLocation),
 				Properties: &armkeyvault.VaultProperties{
-					TenantID: to.StringPtr(tenantID),
+					TenantID: to.Ptr(tenantID),
 					SKU: &armkeyvault.SKU{
-						Family: armkeyvault.SKUFamilyA.ToPtr(),
-						Name:   armkeyvault.SKUNameStandard.ToPtr(),
+						Family: to.Ptr(armkeyvault.SKUFamilyA),
+						Name:   to.Ptr(armkeyvault.SKUNameStandard),
 					},
-					AccessPolicies: &[]armkeyvault.AccessPolicyEntry{},
+					AccessPolicies: []*armkeyvault.AccessPolicyEntry{},
 				},
 			}, nil)
 		if err != nil {
 			log.Error(err, "client.BeginCreateOrUpdate")
 			return err
 		}
-		_, err = poll.PollUntilDone(ctx, 5*time.Second)
+		_, err = poll.PollUntilDone(ctx, &runtime.PollUntilDoneOptions{
+			Frequency: 5 * time.Second,
+		})
 		if err != nil {
 			log.Error(err, "poll.PollUntilDone")
 			return err
@@ -252,19 +260,21 @@ func CreateKeyVault(ctx context.Context, config azureConfig) error {
 }
 
 // CreateKeyVaultAccessPolicy creates Azure Key Vault Access Policy (if it doesn't exist) or returns error
-func CreateKeyVaultAccessPolicy(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+func CreateKeyVaultAccessPolicy(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
 	resourceGroupName := config.ResourceGroupName
 	keyVaultName := config.KeyVaultName
 	subscriptionID := config.SubscriptionID
 	tenantID := config.TenantID
 	servicePrincipalObjectID := config.ServicePrincipalObjectID
-	log := logr.FromContext(ctx)
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
 
 	var currentUserObjectID string
 	if servicePrincipalObjectID == "" {
 		var err error
-		currentUserObjectID, err = getCurrentUserObjectID(ctx, defaultAzureCredentialOptions, tenantID)
+		currentUserObjectID, err = getCurrentUserObjectID(ctx, cred, tenantID)
 		if err != nil {
 			log.Error(err, "getCurrentUserObjectID")
 			return err
@@ -274,26 +284,23 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, config azureConfig) error {
 		currentUserObjectID = servicePrincipalObjectID
 	}
 
-	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
+	client, err := armkeyvault.NewVaultsClient(subscriptionID, cred, &arm.ClientOptions{})
 	if err != nil {
-		log.Error(err, "azidentity.NewDefaultAzureCredential")
 		return err
 	}
 
-	client := armkeyvault.NewVaultsClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
-
 	keyPermissions := armkeyvault.Permissions{
-		Keys: &[]armkeyvault.KeyPermissions{
-			armkeyvault.KeyPermissionsUpdate,
-			armkeyvault.KeyPermissionsCreate,
-			armkeyvault.KeyPermissionsGet,
-			armkeyvault.KeyPermissionsList,
-			armkeyvault.KeyPermissionsEncrypt,
-			armkeyvault.KeyPermissionsDecrypt,
+		Keys: []*armkeyvault.KeyPermissions{
+			to.Ptr(armkeyvault.KeyPermissionsUpdate),
+			to.Ptr(armkeyvault.KeyPermissionsCreate),
+			to.Ptr(armkeyvault.KeyPermissionsGet),
+			to.Ptr(armkeyvault.KeyPermissionsList),
+			to.Ptr(armkeyvault.KeyPermissionsEncrypt),
+			to.Ptr(armkeyvault.KeyPermissionsDecrypt),
 		},
 	}
 
-	accessPolicies := []armkeyvault.AccessPolicyEntry{
+	accessPolicies := []*armkeyvault.AccessPolicyEntry{
 		{
 			TenantID:    &tenantID,
 			ObjectID:    &currentUserObjectID,
@@ -301,9 +308,9 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, config azureConfig) error {
 		},
 	}
 
-	properties := armkeyvault.VaultAccessPolicyProperties{AccessPolicies: &accessPolicies}
+	properties := armkeyvault.VaultAccessPolicyProperties{AccessPolicies: accessPolicies}
 	parameters := armkeyvault.VaultAccessPolicyParameters{Properties: &properties}
-	options := armkeyvault.VaultsUpdateAccessPolicyOptions{}
+	options := armkeyvault.VaultsClientUpdateAccessPolicyOptions{}
 
 	kv, err := client.Get(ctx, resourceGroupName, keyVaultName, nil)
 	if err != nil {
@@ -312,11 +319,11 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, config azureConfig) error {
 	}
 
 	// Loop through all access policies
-	for _, accessPolicy := range *kv.Vault.Properties.AccessPolicies {
+	for _, accessPolicy := range kv.Vault.Properties.AccessPolicies {
 		// Check if the current object id for the access policy is the same as the current user object id
 		if *accessPolicy.ObjectID == currentUserObjectID {
 			// Check if the Key Permissions in the access policy are the same as the required Key Permissions
-			if keyPermissionsEqual(*accessPolicy.Permissions.Keys, *keyPermissions.Keys) {
+			if keyPermissionsEqual(accessPolicy.Permissions.Keys, keyPermissions.Keys) {
 				// If the correct Key Permissions already exists, return early
 				log.Info("Azure KeyVault Access Policy already correct", "currentUserObjectID", currentUserObjectID)
 				return nil
@@ -336,21 +343,21 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, config azureConfig) error {
 }
 
 // CreateKeyVaultKey creates Azure Key Vault Key (if it doesn't exist) or returns error
-func CreateKeyVaultKey(ctx context.Context, config azureConfig) error {
-	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+func CreateKeyVaultKey(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
 	resourceGroupName := config.ResourceGroupName
 	keyVaultName := config.KeyVaultName
 	keyName := config.KeyVaultKeyName
 	subscriptionID := config.SubscriptionID
-	log := logr.FromContext(ctx)
-
-	cred, err := azidentity.NewDefaultAzureCredential(&defaultAzureCredentialOptions)
+	log, err := logr.FromContext(ctx)
 	if err != nil {
-		log.Error(err, "azidentity.NewDefaultAzureCredential")
 		return err
 	}
 
-	client := armkeyvault.NewKeysClient(armcore.NewDefaultConnection(cred, nil), subscriptionID)
+	client, err := armkeyvault.NewKeysClient(subscriptionID, cred, &arm.ClientOptions{})
+	if err != nil {
+		log.Error(err, "armkeyvault.NewKeysClient")
+		return err
+	}
 
 	_, err = client.Get(ctx, resourceGroupName, keyVaultName, keyName, nil)
 	if err == nil {
@@ -365,15 +372,15 @@ func CreateKeyVaultKey(ctx context.Context, config azureConfig) error {
 		keyName,
 		armkeyvault.KeyCreateParameters{
 			Properties: &armkeyvault.KeyProperties{
-				Attributes: &armkeyvault.Attributes{
-					Enabled: to.BoolPtr(true),
+				Attributes: &armkeyvault.KeyAttributes{
+					Enabled: to.Ptr(true),
 				},
-				KeySize: to.Int32Ptr(2048),
-				KeyOps: &[]armkeyvault.JSONWebKeyOperation{
-					armkeyvault.JSONWebKeyOperationEncrypt,
-					armkeyvault.JSONWebKeyOperationDecrypt,
+				KeySize: to.Ptr[int32](2048),
+				KeyOps: []*armkeyvault.JSONWebKeyOperation{
+					to.Ptr(armkeyvault.JSONWebKeyOperationEncrypt),
+					to.Ptr(armkeyvault.JSONWebKeyOperationDecrypt),
 				},
-				Kty: armkeyvault.JSONWebKeyTypeRsa.ToPtr(),
+				Kty: to.Ptr(armkeyvault.JSONWebKeyTypeRSA),
 			}}, nil)
 	if err != nil {
 		log.Error(err, "armkeyvault.NewKeysClient")
@@ -384,31 +391,50 @@ func CreateKeyVaultKey(ctx context.Context, config azureConfig) error {
 	return nil
 }
 
+// fixApiVersionTransporter is needed for NewManagementLocksClient since it uses an api-version that doesn't seem to work
+type fixApiVersionTransporter struct {
+	apiVersion string
+	httpClient *http.Client
+}
+
+func (t *fixApiVersionTransporter) Do(req *http.Request) (*http.Response, error) {
+	reqQP := req.URL.Query()
+	reqQP.Set("api-version", t.apiVersion)
+	req.URL.RawQuery = reqQP.Encode()
+
+	return t.httpClient.Do(req)
+}
+
 // CreateResourceLock creates Azure Resource Lock (if it doesn't exist) or return error
-func CreateResourceLock(ctx context.Context, config azureConfig, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName string) error {
-	defaultAzureCredentialOptions := config.DefaultAzureCredentialOptions
+func CreateResourceLock(ctx context.Context, cred azcore.TokenCredential, config azureConfig, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName string) error {
 	resourceGroupName := config.ResourceGroupName
 	subscriptionID := config.SubscriptionID
-	log := logr.FromContext(ctx)
-
-	client := locks.NewManagementLocksClient(subscriptionID)
-
-	authorizer, err := getAuthorizer(ctx, []string{"https://management.azure.com/.default"}, defaultAzureCredentialOptions)
+	log, err := logr.FromContext(ctx)
 	if err != nil {
-		log.Error(err, "getAuthorizer")
 		return err
 	}
 
-	client.Authorizer = authorizer
+	client, err := armlocks.NewManagementLocksClient(subscriptionID, cred, &arm.ClientOptions{
+		ClientOptions: policy.ClientOptions{
+			Transport: &fixApiVersionTransporter{
+				apiVersion: "2016-09-01",
+				httpClient: http.DefaultClient,
+			},
+		},
+	})
+	if err != nil {
+		log.Error(err, "armlocks.NewManagementLocksClient")
+		return err
+	}
 
-	_, err = client.GetAtResourceLevel(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName)
+	_, err = client.GetAtResourceLevel(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName, &armlocks.ManagementLocksClientGetAtResourceLevelOptions{})
 	if err == nil {
 		log.Info("Azure Resource Lock already exists", "resourceGroupName", resourceGroupName, "resourceProviderNamespace", resourceProviderNamespace, "resourceType", resourceType, "resourceName", resourceName)
 		return nil
 	}
 
 	if err != nil && strings.Contains(err.Error(), "LockNotFound") {
-		_, err = client.CreateOrUpdateAtResourceLevel(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName, locks.ManagementLockObject{ManagementLockProperties: &locks.ManagementLockProperties{Level: "CanNotDelete", Notes: to.StringPtr("CanNotDelete")}})
+		_, err = client.CreateOrUpdateAtResourceLevel(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName, lockName, armlocks.ManagementLockObject{Properties: &armlocks.ManagementLockProperties{Level: to.Ptr(armlocks.LockLevelCanNotDelete), Notes: to.Ptr("CanNotDelete")}}, &armlocks.ManagementLocksClientCreateOrUpdateAtResourceLevelOptions{})
 		if err != nil {
 			log.Error(err, "client.CreateOrUpdateAtResourceLevel")
 			return err
@@ -422,29 +448,39 @@ func CreateResourceLock(ctx context.Context, config azureConfig, resourceProvide
 	return err
 }
 
-func getCurrentUserObjectID(ctx context.Context, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions, tenantID string) (string, error) {
-	log := logr.FromContext(ctx)
-
-	client := graphrbac.NewSignedInUserClient(tenantID)
-
-	authorizer, err := getAuthorizer(ctx, []string{"https://graph.windows.net/.default"}, defaultAzureCredentialOptions)
+func getCurrentUserObjectID(ctx context.Context, cred azcore.TokenCredential, tenantID string) (string, error) {
+	log, err := logr.FromContext(ctx)
 	if err != nil {
-		log.Error(err, "getAuthorizer")
 		return "", err
 	}
 
-	client.Authorizer = authorizer
-
-	currentUser, err := client.Get(ctx)
+	auth, err := adapter.NewAzureIdentityAuthenticationProviderWithScopes(cred, []string{"https://graph.microsoft.com"})
 	if err != nil {
-		log.Error(err, "client.Get")
+		log.Error(err, "adapter.NewAzureIdentityAuthenticationProviderWithScopes")
 		return "", err
 	}
 
-	return *currentUser.ObjectID, nil
+	adapter, err := msgraphsdk.NewGraphRequestAdapter(auth)
+	if err != nil {
+		log.Error(err, "msgraphsdk.NewGraphRequestAdapter")
+		return "", err
+	}
+
+	client := msgraphsdk.NewGraphServiceClient(adapter)
+
+	me, err := client.Me().Get()
+	if err != nil {
+		log.Error(err, "client.Me().Get()")
+		return "", err
+	}
+	me.GetId()
+
+	id := me.GetId()
+
+	return *id, nil
 }
 
-func keyPermissionsEqual(a, b []armkeyvault.KeyPermissions) bool {
+func keyPermissionsEqual(a, b []*armkeyvault.KeyPermissions) bool {
 	if (a == nil) != (b == nil) {
 		return false
 	}
@@ -457,7 +493,7 @@ OUTER:
 	for _, i := range a {
 		for _, j := range b {
 			// a may have the first letters uppercase while b always have them lowercase
-			if strings.ToLower(string(i)) == strings.ToLower(string(j)) {
+			if strings.ToLower(string(*i)) == strings.ToLower(string(*j)) {
 				continue OUTER
 			}
 		}
@@ -465,19 +501,4 @@ OUTER:
 	}
 
 	return true
-}
-
-func getAuthorizer(ctx context.Context, scopes []string, defaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions) (autorest.Authorizer, error) {
-	log := logr.FromContext(ctx)
-
-	tokenRequestOptions := azcore.TokenRequestOptions{Scopes: scopes}
-	authenticationPolicy := azcore.AuthenticationPolicyOptions{Options: tokenRequestOptions}
-	credentialOptions := azidext.DefaultAzureCredentialOptions{DefaultCredential: &defaultAzureCredentialOptions, AuthenticationPolicy: &authenticationPolicy}
-	authorizer, err := azidext.NewDefaultAzureCredentialAdapter(&credentialOptions)
-	if err != nil {
-		log.Error(err, "azidext.NewDefaultAzureCredentialAdapter")
-		return nil, err
-	}
-
-	return authorizer, nil
 }

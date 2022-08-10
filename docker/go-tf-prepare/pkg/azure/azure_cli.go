@@ -2,24 +2,29 @@ package azure
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/go-logr/logr"
 	"github.com/go-playground/validator/v10"
 	"github.com/urfave/cli/v2"
 )
 
 type azureConfig struct {
-	ServicePrincipalObjectID      string `validate:"omitempty,uuid"`
-	SubscriptionID                string `validate:"uuid"`
-	TenantID                      string `validate:"uuid"`
-	ResourceGroupName             string `validate:"resourcegroup,min=1,max=90"`
-	ResourceGroupLocation         string `validate:"alphanum,lowercase"`
-	StorageAccountName            string `validate:"alphanum,lowercase,min=3,max=24"`
-	StorageAccountContainer       string `validate:"storageaccountcontainer,min=3,max=24"`
-	KeyVaultName                  string `validate:"keyvault,min=3,max=24"`
-	KeyVaultKeyName               string `validate:"keyvaultkey,min=1,max=127"`
-	ResourceLocks                 bool
-	DefaultAzureCredentialOptions azidentity.DefaultAzureCredentialOptions
+	ServicePrincipalObjectID     string `validate:"omitempty,uuid"`
+	SubscriptionID               string `validate:"uuid"`
+	TenantID                     string `validate:"uuid"`
+	ResourceGroupName            string `validate:"resourcegroup,min=1,max=90"`
+	ResourceGroupLocation        string `validate:"alphanum,lowercase"`
+	StorageAccountName           string `validate:"alphanum,lowercase,min=3,max=24"`
+	StorageAccountContainer      string `validate:"storageaccountcontainer,min=3,max=24"`
+	KeyVaultName                 string `validate:"keyvault,min=3,max=24"`
+	KeyVaultKeyName              string `validate:"keyvaultkey,min=1,max=127"`
+	ResourceLocks                bool
+	ExcludeAzureCLICredential    bool
+	ExcludeEnvironmentCredential bool
+	ExcludeMSICredential         bool
 }
 
 func (config azureConfig) Validate() error {
@@ -123,21 +128,19 @@ func Flags() []cli.Flag {
 // Action executes the Azure action
 func Action(ctx context.Context, cli *cli.Context) error {
 	config := azureConfig{
-		ServicePrincipalObjectID: cli.String("service-principal-object-id"),
-		SubscriptionID:           cli.String("subscription-id"),
-		TenantID:                 cli.String("tenant-id"),
-		ResourceGroupName:        cli.String("resource-group-name"),
-		ResourceGroupLocation:    cli.String("resource-group-location"),
-		StorageAccountName:       cli.String("storage-account-name"),
-		StorageAccountContainer:  cli.String("storage-account-container"),
-		KeyVaultName:             cli.String("keyvault-name"),
-		KeyVaultKeyName:          cli.String("keyvault-key-name"),
-		ResourceLocks:            cli.Bool("resource-locks"),
-		DefaultAzureCredentialOptions: azidentity.DefaultAzureCredentialOptions{
-			ExcludeAzureCLICredential:    cli.Bool("exclude-cli-credential"),
-			ExcludeEnvironmentCredential: cli.Bool("exclude-environment-credential"),
-			ExcludeMSICredential:         cli.Bool("exclude-msi-credential"),
-		},
+		ServicePrincipalObjectID:     cli.String("service-principal-object-id"),
+		SubscriptionID:               cli.String("subscription-id"),
+		TenantID:                     cli.String("tenant-id"),
+		ResourceGroupName:            cli.String("resource-group-name"),
+		ResourceGroupLocation:        cli.String("resource-group-location"),
+		StorageAccountName:           cli.String("storage-account-name"),
+		StorageAccountContainer:      cli.String("storage-account-container"),
+		KeyVaultName:                 cli.String("keyvault-name"),
+		KeyVaultKeyName:              cli.String("keyvault-key-name"),
+		ResourceLocks:                cli.Bool("resource-locks"),
+		ExcludeAzureCLICredential:    cli.Bool("exclude-cli-credential"),
+		ExcludeEnvironmentCredential: cli.Bool("exclude-environment-credential"),
+		ExcludeMSICredential:         cli.Bool("exclude-msi-credential"),
 	}
 
 	err := config.Validate()
@@ -145,49 +148,87 @@ func Action(ctx context.Context, cli *cli.Context) error {
 		return err
 	}
 
-	err = CreateResourceGroup(ctx, config)
+	cred, err := getCredentials(ctx, config)
 	if err != nil {
 		return err
 	}
 
-	err = CreateStorageAccount(ctx, config)
+	err = CreateResourceGroup(ctx, cred, config)
 	if err != nil {
 		return err
 	}
 
-	if config.ResourceLocks {
-		err = CreateResourceLock(ctx, config, "Microsoft.Storage", "", "storageAccounts", config.StorageAccountName, "DoNotDelete")
-		if err != nil {
-			return err
-		}
-	}
-
-	err = CreateStorageAccountContainer(ctx, config)
-	if err != nil {
-		return err
-	}
-
-	err = CreateKeyVault(ctx, config)
+	err = CreateStorageAccount(ctx, cred, config)
 	if err != nil {
 		return err
 	}
 
 	if config.ResourceLocks {
-		err = CreateResourceLock(ctx, config, "Microsoft.KeyVault", "", "vaults", config.KeyVaultName, "DoNotDelete")
+		err = CreateResourceLock(ctx, cred, config, "Microsoft.Storage", "", "storageAccounts", config.StorageAccountName, "DoNotDelete")
 		if err != nil {
 			return err
 		}
 	}
 
-	err = CreateKeyVaultAccessPolicy(ctx, config)
+	err = CreateStorageAccountContainer(ctx, cred, config)
 	if err != nil {
 		return err
 	}
 
-	err = CreateKeyVaultKey(ctx, config)
+	err = CreateKeyVault(ctx, cred, config)
+	if err != nil {
+		return err
+	}
+
+	if config.ResourceLocks {
+		err = CreateResourceLock(ctx, cred, config, "Microsoft.KeyVault", "", "vaults", config.KeyVaultName, "DoNotDelete")
+		if err != nil {
+			return err
+		}
+	}
+
+	err = CreateKeyVaultAccessPolicy(ctx, cred, config)
+	if err != nil {
+		return err
+	}
+
+	err = CreateKeyVaultKey(ctx, cred, config)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func getCredentials(ctx context.Context, config azureConfig) (azcore.TokenCredential, error) {
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if !config.ExcludeEnvironmentCredential {
+		cred, err := azidentity.NewEnvironmentCredential(nil)
+		if err == nil {
+			return cred, nil
+		}
+		log.Info("NewEnvironmentCredential failed", "error", err)
+	}
+	if !config.ExcludeMSICredential {
+		cred, err := azidentity.NewManagedIdentityCredential(nil)
+		if err == nil {
+			return cred, nil
+		}
+		log.Info("NewManagedIdentityCredential failed", "error", err)
+	}
+	if !config.ExcludeAzureCLICredential {
+		cred, err := azidentity.NewAzureCLICredential(nil)
+		if err == nil {
+			return cred, nil
+		}
+		log.Info("NewAzureCLICredential failed", "error", err)
+	}
+
+	err = fmt.Errorf("no credentials found")
+	log.Error(err, "all tested credentials failed")
+	return nil, err
 }
