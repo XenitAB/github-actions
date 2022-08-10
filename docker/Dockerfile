@@ -1,4 +1,4 @@
-FROM golang:1.15 as tf-prepare-builder
+FROM golang:1.19 as tf-prepare-builder
 WORKDIR /workspace
 
 COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
