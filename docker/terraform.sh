@@ -26,7 +26,7 @@ prepare () {
   AZ_ACCOUNT_TYPE="$(az account show --query user.type --output tsv)"
   if [[ "${AZ_ACCOUNT_TYPE}" = "servicePrincipal" ]]; then
     export AZURE_SERVICE_PRINCIPAL_APP_ID="$(az account show --query user.name --output tsv)"
-    export AZURE_SERVICE_PRINCIPAL_OBJECT_ID="$(az ad sp show --id $AZURE_SERVICE_PRINCIPAL_APP_ID --query objectId --output tsv)"
+    export AZURE_SERVICE_PRINCIPAL_OBJECT_ID="$(az ad sp show --id $AZURE_SERVICE_PRINCIPAL_APP_ID --query id --output tsv)"
   fi
   export AZURE_SUBSCRIPTION_ID=$(az account show --output tsv --query id)
   export AZURE_TENANT_ID=$(az account show --output tsv --query tenantId)
