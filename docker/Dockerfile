@@ -12,8 +12,7 @@ FROM debian:11.4-slim
 #Base
 RUN apt-get update -y && \
     apt-get install -y git curl openssl pip make unzip gpg wget && \
-    apt-get install -y ansible=2.10.7+merged+base+2.10.8+dfsg-1 && \
-    apt-get install -y packer=1.6.6+ds1-2+b3
+    apt-get install -y ansible=2.10.7+merged+base+2.10.8+dfsg-1
 
 RUN pip --no-cache-dir install -U pip
 
@@ -76,6 +75,10 @@ RUN /usr/src/install-scripts/helm.sh --version="v3.9.2" --sha="3f5be38068a182967
 
 COPY --from=tf-prepare-builder /workspace/tf-prepare /usr/local/bin/tf-prepare
 RUN chmod +x /usr/local/bin/tf-prepare
+
+# Install packer
+COPY install-scripts/packer.sh /usr/src/install-scripts/packer.sh
+RUN /usr/src/install-scripts/packer.sh --version="1.8.3" --sha="0587f7815ed79589cd9c2b754c82115731c8d0b8fd3b746fe40055d969facba5"
 
 #Cleanup
 RUN apt-get autoremove && \
