@@ -191,11 +191,21 @@ func registerResourceProviderIfNeeded(ctx context.Context, cred azcore.TokenCred
 			log.Error(err, "client.Get")
 			return err
 		}
+
 		currentRegistrationState = *res.RegistrationState
 		if currentRegistrationState == "Registered" {
 			log.Info("Azure Resource Provider registered", "resourceProviderNamespace", resourceProviderNamespace, "registrationState", currentRegistrationState)
 			return nil
 		}
+
+		if currentRegistrationState != "Registering" {
+			err := fmt.Errorf("unknown registration state")
+			log.Error(err, "Azure Resource Provider in unknown registration state", "resourceProviderNamespace", resourceProviderNamespace, "registrationState", currentRegistrationState)
+			return err
+		}
+
+		log.Info("Registering Azure Resource Provider", "resourceProviderNamespace", resourceProviderNamespace, "registrationState", currentRegistrationState, "retryCounter", i)
+
 		time.Sleep(time.Duration(i*5) * time.Second)
 	}
 
