@@ -84,6 +84,11 @@ func CreateStorageAccount(ctx context.Context, cred azcore.TokenCredential, conf
 	}
 
 	if err != nil && strings.Contains(err.Error(), "ResourceNotFound") {
+		err := registerResourceProviderIfNeeded(ctx, cred, config, "Microsoft.Storage")
+		if err != nil {
+			return err
+		}
+
 		res, err := client.CheckNameAvailability(
 			ctx,
 			armstorage.AccountCheckNameAvailabilityParameters{
@@ -139,6 +144,64 @@ func CreateStorageAccount(ctx context.Context, cred azcore.TokenCredential, conf
 	}
 
 	log.Error(err, "client.GetProperties")
+	return err
+}
+
+func registerResourceProviderIfNeeded(ctx context.Context, cred azcore.TokenCredential, config azureConfig, resourceProviderNamespace string) error {
+	subscriptionID := config.SubscriptionID
+	log, err := logr.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	client, err := armresources.NewProvidersClient(subscriptionID, cred, &arm.ClientOptions{})
+	if err != nil {
+		log.Error(err, "armresources.NewProvidersClient")
+		return err
+	}
+
+	res, err := client.Get(ctx, resourceProviderNamespace, &armresources.ProvidersClientGetOptions{})
+	if err != nil {
+		log.Error(err, "client.Get")
+		return err
+	}
+
+	if *res.RegistrationState == "Registered" {
+		log.Info("Azure Resource Provider already registered", "resourceProviderNamespace", resourceProviderNamespace, "registrationState", *res.RegistrationState)
+		return nil
+	}
+
+	regRes, err := client.Register(ctx, resourceProviderNamespace, &armresources.ProvidersClientRegisterOptions{})
+	if err != nil {
+		log.Error(err, "client.Register")
+		return err
+	}
+
+	log.Info("Registering Azure Resource Provider", "resourceProviderNamespace", resourceProviderNamespace, "registrationState", *regRes.RegistrationState)
+
+	if *regRes.RegistrationState == "Registered" {
+		log.Info("Azure Resource Provider registered", "resourceProviderNamespace", resourceProviderNamespace, "registrationState", *regRes.RegistrationState)
+		return nil
+	}
+
+	currentRegistrationState := ""
+	for i := 1; i < 10; i++ {
+		res, err := client.Get(ctx, resourceProviderNamespace, &armresources.ProvidersClientGetOptions{})
+		if err != nil {
+			log.Error(err, "client.Get")
+			return err
+		}
+		currentRegistrationState = *res.RegistrationState
+		if currentRegistrationState == "Registered" {
+			log.Info("Azure Resource Provider registered", "resourceProviderNamespace", resourceProviderNamespace, "registrationState", currentRegistrationState)
+			return nil
+		}
+		time.Sleep(time.Duration(i*5) * time.Second)
+	}
+
+	err = fmt.Errorf("registration not completed within the specified time period")
+	log.Error(err, "Unable to register Azure Resource Provider", resourceProviderNamespace, "registrationState", currentRegistrationState)
+
 	return err
 }
 
