@@ -29,13 +29,13 @@ RUN /usr/src/install-scripts/aws-cli.sh --version="2.7.21"
 
 # Install tflint
 COPY install-scripts/tflint.sh /usr/src/install-scripts/tflint.sh
-RUN /usr/src/install-scripts/tflint.sh --version="v0.39.2" --sha="2a56e42db112ac5ae32ab31f37bee8c0803333eeb85556597935a95adb25f654"
+RUN /usr/src/install-scripts/tflint.sh --version="v0.42.1" --sha="11294cb2f395182fefdc7d35f49fc18966dda8860fcea1ecd67b6ab190ab7ea0"
 COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
 
 # Install tflint ruleset
 COPY install-scripts/tflint-ruleset.sh /usr/src/install-scripts/tflint-ruleset.sh
-RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.17.1" --sha="302ce68e9f8a88718e0d59d6737c718526c4f814ecce775489a8cd2d4014fdbe"
-RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.15.0" --sha="8aa7da4ec5e02884763a0bab89a717f0e33004469c3a846810c82ea59df64ed6"
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.18.0" --sha="39e3f45a7d00222abd151ec2dc0909d84cc5503bbb187d5a500a27643c1e8483"
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.18.0" --sha="433916290a2603e0a388b8f05f4d462cec765d45222228e12e411b7007988916"
 
 # Install terraform (tfenv)
 COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
