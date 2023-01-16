@@ -43,12 +43,14 @@ prepare () {
   tf-prepare azure
 }
 
+init () {
+  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
+  select_workspace
+}
+
 plan () {
   rm -f .terraform/plans/${ENVIRONMENT}
-  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
-
-  select_workspace
-
+  init
   mkdir -p .terraform/plans
   terraform plan -input=false -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="../global.tfvars" -out=".terraform/plans/${ENVIRONMENT}"
   terraform show -json .terraform/plans/${ENVIRONMENT} > .terraform/plans/${ENVIRONMENT}.json
@@ -71,8 +73,7 @@ plan () {
 }
 
 apply () {
-  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
-  terraform workspace select ${ENVIRONMENT}
+  init
   SOPS_KEY_ID="$(az keyvault key show --name ${BACKEND_KV_KEY} --vault-name ${BACKEND_KV} --query key.kid --output tsv)"
   sops --decrypt --azure-kv ${SOPS_KEY_ID} .terraform/plans/${ENVIRONMENT}.enc > .terraform/plans/${ENVIRONMENT}
   rm -rf .terraform/plans/${ENVIRONMENT}.enc
@@ -85,9 +86,7 @@ apply () {
 }
 
 destroy () {
-  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
-  terraform workspace select ${ENVIRONMENT}
-
+  init
   echo "-------"
   echo "You are about to run terraform destroy on ${DIR} in ${ENVIRONMENT}"
   echo "-------"
@@ -104,8 +103,7 @@ destroy () {
 }
 
 state_remove () {
-  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
-  terraform workspace select ${ENVIRONMENT}
+  init
   TF_STATE_OBJECTS=$(terraform state list)
 
   echo "-------"
@@ -146,8 +144,7 @@ state_remove () {
 }
 
 validate () {
-  terraform init -input=false -backend-config="key=${BACKEND_KEY}" -backend-config="resource_group_name=${BACKEND_RG}" -backend-config="storage_account_name=${BACKEND_NAME}" -backend-config="container_name=${CONTAINER_NAME}" -backend-config="snapshot=true"
-  select_workspace
+  init
   terraform validate
   terraform fmt .
   terraform fmt variables/
@@ -168,6 +165,11 @@ select_workspace() {
 cd /tmp/$DIR
 
 case $ACTION in
+
+  init )
+    init
+    ;;
+
   plan )
     plan
     ;;

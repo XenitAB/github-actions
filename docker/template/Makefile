@@ -5,12 +5,16 @@ SUFFIX="tfstate[random 4 digits]"
 IMAGE="ghcr.io/xenitab/github-actions/tools:[tag]"
 AWS_ENABLED:=false
 
+# User mapping compat when using podman as alias for docker (with Debian update-alternatives or Red Hat alternatives)
+export PODMAN_USERNS=keep-id
+
 OPA_BLAST_RADIUS := $(if $(OPA_BLAST_RADIUS),$(OPA_BLAST_RADIUS),50)
 RG_LOCATION_SHORT:=we
 RG_LOCATION_LONG:=westeurope
 AZURE_CONFIG_DIR := $(if $(AZURE_CONFIG_DIR),$(AZURE_CONFIG_DIR),"$${HOME}/.azure")
 TTY_OPTIONS=$(shell [ -t 0 ] && echo '-it')
 TEMP_ENV_FILE:=$(shell mktemp)
+TEMP_SHELL_RC_FILE:=$(shell mktemp)
 
 ifndef ENV
 $(error Need to set ENV)
@@ -20,8 +24,12 @@ $(error Need to set DIR)
 endif
 
 AZURE_DIR_MOUNT:=-v $(AZURE_CONFIG_DIR):/work/.azure
-DOCKER_RUN:=docker run --user $(shell id -u) $(TTY_OPTIONS) --rm --entrypoint /opt/terraform.sh --env-file $(TEMP_ENV_FILE) $(AZURE_DIR_MOUNT) -v "$${PWD}/$(DIR)":"/tmp/$(DIR)" -v "$${PWD}/global.tfvars":"/tmp/global.tfvars" $(IMAGE)
-CLEANUP_COMMAND:=$(MAKE) --no-print-directory teardown TEMP_ENV_FILE=$(TEMP_ENV_FILE)
+DOCKER_ENTRYPOINT:=/opt/terraform.sh
+DOCKER_OPTS:=--user $(shell id -u) $(TTY_OPTIONS) --rm --env-file $(TEMP_ENV_FILE)
+DOCKER_MOUNTS:=-v "$${PWD}/$(DIR)":"/tmp/$(DIR)" -v "$${PWD}/global.tfvars":"/tmp/global.tfvars"
+DOCKER_RUN:=docker run $(DOCKER_OPTS) --entrypoint $(DOCKER_ENTRYPOINT) $(AZURE_DIR_MOUNT) $(DOCKER_MOUNTS) $(IMAGE)
+DOCKER_SHELL:=docker run $(DOCKER_OPTS) --entrypoint /bin/bash $(AZURE_DIR_MOUNT) $(DOCKER_MOUNTS) -v "$(TEMP_SHELL_RC_FILE)":"/work/.bashrc" $(IMAGE)
+CLEANUP_COMMAND:=$(MAKE) --no-print-directory teardown TEMP_ENV_FILE=$(TEMP_ENV_FILE) TEMP_SHELL_RC_FILE=$(TEMP_SHELL_RC_FILE)
 
 .PHONY: setup
 .SILENT: setup
@@ -103,3 +111,12 @@ state-remove: setup
 validate: setup
 	trap '$(CLEANUP_COMMAND)' EXIT
 	$(DOCKER_RUN) validate $(DIR) $(ENV) $(SUFFIX)
+
+.PHONY: shell
+shell: setup
+	trap '$(CLEANUP_COMMAND)' EXIT
+	cat << EOF > $(TEMP_SHELL_RC_FILE)
+	cd /tmp/$(DIR)
+	/opt/terraform.sh init $(DIR) $(ENV) $(SUFFIX)
+	EOF
+	$(DOCKER_SHELL)
