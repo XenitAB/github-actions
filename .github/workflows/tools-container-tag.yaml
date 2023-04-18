@@ -6,6 +6,7 @@ on:
       - published
     paths:
       - "docker/**"
+      - ".github/**"
 
 jobs:
   publish_latest:
