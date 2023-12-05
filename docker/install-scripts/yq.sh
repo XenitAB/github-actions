@@ -13,4 +13,4 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-pip --no-cache-dir install yq==${VERSION}
+apt-get install -y yq=${VERSION}

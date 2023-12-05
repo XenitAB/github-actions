@@ -16,7 +16,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-wget https://github.com/stedolan/jq/releases/download/jq-${VERSION}/jq-linux64
+wget https://github.com/jqlang/jq/releases/download/jq-${VERSION}/jq-linux64
 
 DOWNLOAD_SHA=$(openssl sha1 -sha256 jq-linux64 | awk '{print $2}')
 if [[ "${SHA}" != "${DOWNLOAD_SHA}" ]]; then

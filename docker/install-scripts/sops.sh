@@ -16,13 +16,13 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-wget https://github.com/mozilla/sops/releases/download/${VERSION}/sops-${VERSION}.linux
+wget https://github.com/getsops/sops/releases/download/${VERSION}/sops-${VERSION}.linux.amd64
 
-DOWNLOAD_SHA=$(openssl sha1 -sha256 sops-${VERSION}.linux | awk '{print $2}')
+DOWNLOAD_SHA=$(openssl sha1 -sha256 sops-${VERSION}.linux.amd64 | awk '{print $2}')
 if [[ "${SHA}" != "${DOWNLOAD_SHA}" ]]; then
     echo "Downloaded checksum (${DOWNLOAD_SHA}) does not match expected value: ${SHA}"
     exit 1
 fi
 
-chmod +x sops-${VERSION}.linux
-mv sops-${VERSION}.linux /usr/local/bin/sops
+chmod +x sops-${VERSION}.linux.amd64
+mv sops-${VERSION}.linux.amd64 /usr/local/bin/sops
