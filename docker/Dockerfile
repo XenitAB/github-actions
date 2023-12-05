@@ -1,4 +1,4 @@
-FROM golang:1.19 as tf-prepare-builder
+FROM golang:1.21 as tf-prepare-builder
 WORKDIR /workspace
 
 COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
@@ -7,43 +7,41 @@ COPY ./go-tf-prepare/main.go main.go
 COPY ./go-tf-prepare/pkg/ pkg/
 RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
 
-FROM debian:11.4-slim
+FROM debian:12.2-slim
 
 #Base
-RUN apt-get update -y && \
-    apt-get install -y git curl openssl pip make unzip gpg wget && \
-    apt-get install -y ansible=2.10.7+merged+base+2.10.8+dfsg-1
-
-RUN pip --no-cache-dir install -U pip
+RUN apt-get update -y
+RUN apt-get install -y git curl openssl pip make unzip gpg wget apt-utils
+RUN apt-get install -y ansible=7.3.0+dfsg-1
 
 RUN mkdir -p /tmp/install /usr/src /work
 WORKDIR /tmp/install
 
 # Install Azure CLI
 COPY install-scripts/azure-cli.sh /usr/src/install-scripts/azure-cli.sh
-RUN /usr/src/install-scripts/azure-cli.sh --version="2.39.0"
+RUN /usr/src/install-scripts/azure-cli.sh --version="2.55.0"
 
 # Install AWS CLI
 COPY install-scripts/aws-cli.sh /usr/src/install-scripts/aws-cli.sh
-RUN /usr/src/install-scripts/aws-cli.sh --version="2.7.21"
+RUN /usr/src/install-scripts/aws-cli.sh --version="2.14.5"
 
 # Install tflint
 COPY install-scripts/tflint.sh /usr/src/install-scripts/tflint.sh
-RUN /usr/src/install-scripts/tflint.sh --version="v0.42.1" --sha="11294cb2f395182fefdc7d35f49fc18966dda8860fcea1ecd67b6ab190ab7ea0"
+RUN /usr/src/install-scripts/tflint.sh --version="v0.49.0" --sha="56d862054e8f71e3ba392c6617fca2d730b5ecdf8a4a0768ba6087406dcc7d63"
 COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
 
 # Install tflint ruleset
 COPY install-scripts/tflint-ruleset.sh /usr/src/install-scripts/tflint-ruleset.sh
-RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.18.0" --sha="39e3f45a7d00222abd151ec2dc0909d84cc5503bbb187d5a500a27643c1e8483"
-RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.18.0" --sha="433916290a2603e0a388b8f05f4d462cec765d45222228e12e411b7007988916"
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.25.1" --sha="a0812b02b93dfbfcfb9521a665be249b025ee074f60943e5b5eb1869dbb36ee0"
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.28.0" --sha="f099944a68e464665dfd4067b663ff6c68229b703d5dff9faea789d3974b078a"
 
 # Install terraform (tfenv)
 COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
-RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="1.3.1" --tfenv-version="v3.0.0"
+RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="1.5.7" --tfenv-version="v3.0.0"
 
 # Install tfsec
 COPY install-scripts/tfsec.sh /usr/src/install-scripts/tfsec.sh
-RUN /usr/src/install-scripts/tfsec.sh --version="v1.27.1" --sha="edf06ce4897a3113dda6393b31345aea8b70626dac4c67df87ef0b69fd6c83f0"
+RUN /usr/src/install-scripts/tfsec.sh --version="v1.28.4" --sha="ecd6c40122835356b78d9488328c2c1c186a1a03c8ae00c6a33ba1c08909a4d9"
 
 # Install Open Policy Agent
 COPY install-scripts/opa.sh /usr/src/install-scripts/opa.sh
@@ -51,34 +49,34 @@ RUN /usr/src/install-scripts/opa.sh --version="v0.43.0" --sha="d5337139a7ccb0414
 
 # Install sops
 COPY install-scripts/sops.sh /usr/src/install-scripts/sops.sh
-RUN /usr/src/install-scripts/sops.sh --version="v3.7.3" --sha="53aec65e45f62a769ff24b7e5384f0c82d62668dd96ed56685f649da114b4dbb"
+RUN /usr/src/install-scripts/sops.sh --version="v3.8.1" --sha="d6bf07fb61972127c9e0d622523124c2d81caf9f7971fb123228961021811697"
 
 # Install GitHub CLI
 COPY install-scripts/github-cli.sh /usr/src/install-scripts/github-cli.sh
-RUN /usr/src/install-scripts/github-cli.sh --version="2.14.3" --sha="95fe2e93bbd7a9f02d5b22cee01a53ab6d581fda8fa170364b668d142840ef58"
+RUN /usr/src/install-scripts/github-cli.sh --version="2.39.2" --sha="460d270662f80b8314928ff80ac36db619b8bbac281a1331afd0d6e822f40426"
 
 # Install jq
 COPY install-scripts/jq.sh /usr/src/install-scripts/jq.sh
-RUN /usr/src/install-scripts/jq.sh --version="1.6" --sha="af986793a515d500ab2d35f8d2aecd656e764504b789b66d7e1a0b727a124c44"
+RUN /usr/src/install-scripts/jq.sh --version="1.7" --sha="2f312b9587b1c1eddf3a53f9a0b7d276b9b7b94576c85bda22808ca950569716"
 
 # Install yq
 COPY install-scripts/yq.sh /usr/src/install-scripts/yq.sh
-RUN /usr/src/install-scripts/yq.sh --version="3.1.0"
+RUN /usr/src/install-scripts/yq.sh --version="3.1.0-3"
 
 # Install kubectl
 COPY install-scripts/kubectl.sh /usr/src/install-scripts/kubectl.sh
-RUN /usr/src/install-scripts/kubectl.sh --version="v1.24.3" --sha="8a45348bdaf81d46caf1706c8bf95b3f431150554f47d444ffde89e8cdd712c1"
+RUN /usr/src/install-scripts/kubectl.sh --version="v1.28.4" --sha="893c92053adea6edbbd4e959c871f5c21edce416988f968bec565d115383f7b8"
 
 # Install helm
 COPY install-scripts/helm.sh /usr/src/install-scripts/helm.sh
-RUN /usr/src/install-scripts/helm.sh --version="v3.9.2" --sha="3f5be38068a1829670440ccf00b3b6656fd90d0d9cfd4367539f3b13e4c20531"
+RUN /usr/src/install-scripts/helm.sh --version="v3.13.2" --sha="55a8e6dce87a1e52c61e0ce7a89bf85b38725ba3e8deb51d4a08ade8a2c70b2d"
 
 COPY --from=tf-prepare-builder /workspace/tf-prepare /usr/local/bin/tf-prepare
 RUN chmod +x /usr/local/bin/tf-prepare
 
 # Install packer
 COPY install-scripts/packer.sh /usr/src/install-scripts/packer.sh
-RUN /usr/src/install-scripts/packer.sh --version="1.8.3" --sha="0587f7815ed79589cd9c2b754c82115731c8d0b8fd3b746fe40055d969facba5"
+RUN /usr/src/install-scripts/packer.sh --version="1.9.4" --sha="6cd5269c4245aa8c99e551d1b862460d63fe711c58bec618fade25f8492e80d9"
 
 #Cleanup
 RUN apt-get autoremove && \
