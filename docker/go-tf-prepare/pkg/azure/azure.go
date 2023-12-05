@@ -20,6 +20,7 @@ import (
 
 	adapter "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
+	"github.com/microsoftgraph/msgraph-sdk-go/users"
 )
 
 // CreateResourceGroup creates Azure Resource Group (if it doesn't exist) or returns error
@@ -541,7 +542,7 @@ func getCurrentUserObjectID(ctx context.Context, cred azcore.TokenCredential, te
 
 	client := msgraphsdk.NewGraphServiceClient(adapter)
 
-	me, err := client.Me().Get()
+	me, err := client.Me().Get(ctx, &users.UserItemRequestBuilderGetRequestConfiguration{})
 	if err != nil {
 		log.Error(err, "client.Me().Get()")
 		return "", err
