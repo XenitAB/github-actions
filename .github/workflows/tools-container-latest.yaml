@@ -29,9 +29,9 @@ jobs:
       - name: Build and push container image
         uses: docker/build-push-action@v6
         with:
-          cache-from: ghcr.io/${{GITHUB_REPOSITORY}}/tools:latest
+          cache-from: ghcr.io/${{env.GITHUB_REPOSITORY}}/tools:latest
           file: docker/Dockerfile
           context: docker
-          tags: ghcr.io/${{GITHUB_REPOSITORY}}/tools:latest
+          tags: ghcr.io/${{env.GITHUB_REPOSITORY}}/tools:latest
           platforms: linux/amd64,linux/arm64
           push: true
