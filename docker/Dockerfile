@@ -1,4 +1,4 @@
-FROM golang:1.21 as tf-prepare-builder
+FROM golang:1.21 AS tf-prepare-builder
 WORKDIR /workspace
 
 COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
@@ -12,7 +12,7 @@ FROM debian:12.2-slim
 #Base
 RUN apt-get update -y
 RUN apt-get install -y git curl openssl pip make unzip gpg wget apt-utils
-RUN apt-get install -y ansible=7.3.0+dfsg-1
+RUN apt-get install -y ansible=7.7.0+dfsg-3+deb12u1
 
 RUN mkdir -p /tmp/install /usr/src /work
 WORKDIR /tmp/install
