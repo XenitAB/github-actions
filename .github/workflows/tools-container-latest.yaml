@@ -38,7 +38,7 @@ jobs:
           push: true
 
       # Light multiArch image
-      - name: '[LIGHT] Build and push container image'
+      - name: '[LITE] Build and push container image'
         uses: docker/build-push-action@v6
         with:
           cache-from: ghcr.io/${{github.repository}}/tools:lite

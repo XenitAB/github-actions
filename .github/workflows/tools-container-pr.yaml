@@ -27,7 +27,7 @@ jobs:
           push: false
 
       # Build the LITE multiArch container image
-      - name: Build container image
+      - name: '[LITE] Build container image'
         uses: docker/build-push-action@v6
         with:
           cache-from: ghcr.io/${{github.repository}}/tools:lite
