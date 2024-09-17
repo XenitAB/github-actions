@@ -1,6 +1,7 @@
 name: Tools Container - Publish Tag
 
 on:
+  workflow_dispatch:
   release:
     types:
       - published
