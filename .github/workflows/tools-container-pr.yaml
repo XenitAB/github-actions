@@ -17,11 +17,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Build the container image
       - name: Build container image
         uses: docker/build-push-action@v6
         with:
-          cache-from: ghcr.io/xenitab/github-actions/tools:latest
+          cache-from: ghcr.io/${{github.repository}}/tools:latest
           file: docker/Dockerfile
+          context: docker
+          push: false
+
+      # Build the LITE multiArch container image
+      - name: Build container image
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: ghcr.io/${{github.repository}}/tools:lite
+          file: docker/Dockerfile.lite
           context: docker
           platforms: linux/amd64,linux/arm64
           push: false
+          tags: ghcr.io/${{github.repository}}/tools:lite

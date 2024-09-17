@@ -26,6 +26,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Original 
       - name: Build and push container image
         uses: docker/build-push-action@v6
         with:
@@ -33,5 +34,15 @@ jobs:
           file: docker/Dockerfile
           context: docker
           tags: ghcr.io/${{github.repository}}/tools:latest
+          push: true
+
+      # Light multiArch image
+      - name: '[LIGHT] Build and push container image'
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: ghcr.io/${{github.repository}}/tools:lite
+          file: docker/Dockerfile.lite
+          context: docker
+          tags: ghcr.io/${{github.repository}}/tools:lite
           platforms: linux/amd64,linux/arm64
           push: true
