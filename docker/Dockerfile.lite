@@ -48,7 +48,7 @@ RUN /usr/src/install-scripts/sops.sh --version="v3.9.0"
 
 # Install GitHub CLI
 COPY install-scripts/github-cli-lite.sh /usr/src/install-scripts/github-cli.sh
-RUN /usr/src/install-scripts/github-cli.sh --version="2.57.0"
+RUN /usr/src/install-scripts/github-cli.sh --version="2.58.0"
 
 # Install jq
 COPY install-scripts/jq-lite.sh /usr/src/install-scripts/jq.sh

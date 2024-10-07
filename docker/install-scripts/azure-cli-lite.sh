@@ -23,7 +23,7 @@ chmod go+r /etc/apt/keyrings/microsoft.gpg
 #AZ_DIST=$(lsb_release -cs)
 AZ_DIST=$(grep -ioP '^VERSION_CODENAME=\K.+' /etc/os-release)
 ARCHITECTURE=$(dpkg --print-architecture)
-echo "Adding sources to the sources list, DIST=${AZ_DIST} and ARCH=..."
+echo "Adding sources to the sources list, DIST=${AZ_DIST} and ARCH=${ARCHITECTURE}..."
 
 echo "Types: deb
 URIs: https://packages.microsoft.com/repos/azure-cli/
