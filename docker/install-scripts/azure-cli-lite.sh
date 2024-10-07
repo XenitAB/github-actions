@@ -13,21 +13,34 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+echo "Adding keys to the keyring..."
 mkdir -p /etc/apt/keyrings
 curl -sLS https://packages.microsoft.com/keys/microsoft.asc |
   gpg --dearmor | tee /etc/apt/keyrings/microsoft.gpg > /dev/null
+echo "Keys added to the keyring, setting permissions..."
 chmod go+r /etc/apt/keyrings/microsoft.gpg
 
-AZ_DIST=$(lsb_release -cs)
+#AZ_DIST=$(lsb_release -cs)
+AZ_DIST=$(grep -ioP '^VERSION_CODENAME=\K.+' /etc/os-release)
+ARCHITECTURE=$(dpkg --print-architecture)
+echo "Adding sources to the sources list, DIST=${AZ_DIST} and ARCH=..."
+
 echo "Types: deb
 URIs: https://packages.microsoft.com/repos/azure-cli/
 Suites: ${AZ_DIST}
 Components: main
-Architectures: $(dpkg --print-architecture)
+Architectures: ${ARCHITECTURE}
 Signed-by: /etc/apt/keyrings/microsoft.gpg" | tee /etc/apt/sources.list.d/azure-cli.sources
 
+echo "Sources added to the sources list, updating apt and installing AZ CLI..."
 apt-get update
-apt-get install -y azure-cli=${VERSION}-1~$AZ_DIST
+apt-get install -y azure-cli=${VERSION}-1~${AZ_DIST}
 
-az extension add --name azure-devops
-az extension add --name managementpartner
+echo "AZ CLI installed..."
+az version
+
+echo "Adding DEVOPS extension..."
+az extension add --yes --allow-preview false --upgrade --name azure-devops
+echo "Adding MANAGEMENTPARTNER extension..."
+az extension add --yes --allow-preview false --upgrade --name managementpartner
+echo "AZ CLI installation complete."
