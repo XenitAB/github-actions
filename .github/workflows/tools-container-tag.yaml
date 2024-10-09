@@ -5,9 +5,6 @@ on:
   release:
     types:
       - published
-    paths:
-      - "docker/**"
-      - ".github/**"
 
 jobs:
   publish_latest:
@@ -31,6 +28,7 @@ jobs:
         id: get_tag
         run: |
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "repository=${GITHUB_REPOSITORY@L}" >> $GITHUB_OUTPUT
 
       - name: Build and push container image
         uses: docker/build-push-action@v6
@@ -38,15 +36,15 @@ jobs:
           cache-from: ghcr.io/${{github.repository}}/tools:latest
           file: docker/Dockerfile
           context: docker
-          tags: ghcr.io/${{github.repository}}/tools:${{ steps.get_tag.outputs.tag }}
+          tags: ghcr.io/${{ steps.get_tag.outputs.repository }}/tools:${{ steps.get_tag.outputs.tag }}
           push: true
 
       - name: '[LITE] Build and push container image'
         uses: docker/build-push-action@v6
         with:
           cache-from: ghcr.io/${{github.repository}}/tools:lite
-          file: docker/Dockerfile
+          file: docker/Dockerfile.lite
           context: docker
-          tags: ghcr.io/${{github.repository}}/tools:lite-${{ steps.get_tag.outputs.tag }}
+          tags: ghcr.io/${{ steps.get_tag.outputs.repository }}/tools:lite-${{ steps.get_tag.outputs.tag }}
           platforms: linux/amd64,linux/arm64
           push: true
