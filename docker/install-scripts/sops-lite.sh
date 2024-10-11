@@ -14,7 +14,7 @@ while [ $# -gt 0 ]; do
 done
 
 ARCHITECTURE=$(dpkg --print-architecture)
-wget https://github.com/getsops/sops/releases/download/${VERSION}/sops-${VERSION}.linux.${ARCHITECTURE}
+wget -nv https://github.com/getsops/sops/releases/download/${VERSION}/sops-${VERSION}.linux.${ARCHITECTURE}
 
 chmod +x sops-${VERSION}.linux.${ARCHITECTURE}
 mv sops-${VERSION}.linux.${ARCHITECTURE} /usr/local/bin/sops

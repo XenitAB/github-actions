@@ -17,7 +17,7 @@ while [ $# -gt 0 ]; do
 done
 
 ARCHITECTURE=$(dpkg --print-architecture)
-wget https://github.com/terraform-linters/tflint-ruleset-${RULESET}/releases/download/${VERSION}/tflint-ruleset-${RULESET}_linux_${ARCHITECTURE}.zip
+wget -nv https://github.com/terraform-linters/tflint-ruleset-${RULESET}/releases/download/${VERSION}/tflint-ruleset-${RULESET}_linux_${ARCHITECTURE}.zip
 
 unzip tflint-ruleset-${RULESET}_linux_${ARCHITECTURE}.zip
 rm tflint-ruleset-${RULESET}_linux_${ARCHITECTURE}.zip

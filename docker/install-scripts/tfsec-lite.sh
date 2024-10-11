@@ -14,7 +14,7 @@ while [ $# -gt 0 ]; do
 done
 
 ARCHITECTURE=$(dpkg --print-architecture)
-wget https://github.com/aquasecurity/tfsec/releases/download/${VERSION}/tfsec-linux-${ARCHITECTURE}
+wget -nv https://github.com/aquasecurity/tfsec/releases/download/${VERSION}/tfsec-linux-${ARCHITECTURE}
 
 chmod +x tfsec-linux-${ARCHITECTURE}
 mv tfsec-linux-${ARCHITECTURE} /usr/local/bin/tfsec
