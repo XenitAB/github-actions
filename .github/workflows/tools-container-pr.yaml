@@ -1,7 +1,6 @@
 name: Tools Container - PR Validation
 
 on:
-  workflow_dispatch:
   pull_request:
     paths:
       - 'docker/**'
@@ -12,26 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v1
 
-      # Build the container image
       - name: Build container image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v2
         with:
-          cache-from: ghcr.io/${{github.repository}}/tools:latest
+          cache-from: ghcr.io/xenitab/github-actions/tools:latest
           file: docker/Dockerfile
           context: docker
-          push: false
-
-      # Build the LITE multiArch container image
-      - name: '[LITE] Build container image'
-        uses: docker/build-push-action@v6
-        with:
-          cache-from: ghcr.io/${{github.repository}}/tools:lite
-          file: docker/Dockerfile.lite
-          context: docker
-          platforms: linux/amd64,linux/arm64
           push: false
