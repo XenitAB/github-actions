@@ -1,0 +1,76 @@
+FROM golang:1.23-bookworm AS tf-prepare-builder
+WORKDIR /workspace
+ARG TARGETARCH
+
+COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
+RUN go mod download
+COPY ./go-tf-prepare/main.go main.go
+COPY ./go-tf-prepare/pkg/ pkg/
+RUN GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on go build -o tf-prepare main.go
+
+FROM debian:bookworm-slim
+
+#Base
+RUN apt-get update -y
+RUN apt-get install -y git curl openssl pip make unzip gpg wget apt-utils
+
+RUN mkdir -p /tmp/install /usr/src /work
+WORKDIR /tmp/install
+
+# Install Azure CLI
+COPY install-scripts/azure-cli-lite.sh /usr/src/install-scripts/azure-cli.sh
+RUN /usr/src/install-scripts/azure-cli.sh --version="2.64.0"
+
+# Install tflint
+COPY install-scripts/tflint-lite.sh /usr/src/install-scripts/tflint.sh
+RUN /usr/src/install-scripts/tflint.sh --version="v0.53.0"
+COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
+
+# Install tflint ruleset
+COPY install-scripts/tflint-ruleset-lite.sh /usr/src/install-scripts/tflint-ruleset.sh
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.27.0"
+
+# Install terraform (tfenv)
+COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
+RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="1.9.5" --tfenv-version="v3.0.0"
+
+# Install tfsec
+COPY install-scripts/tfsec-lite.sh /usr/src/install-scripts/tfsec.sh
+RUN /usr/src/install-scripts/tfsec.sh --version="v1.28.10"
+
+# Install Open Policy Agent, version 0.43.0 ???
+COPY install-scripts/opa-lite.sh /usr/src/install-scripts/opa.sh
+RUN /usr/src/install-scripts/opa.sh --version="v0.68.0"
+
+# Install sops
+COPY install-scripts/sops-lite.sh /usr/src/install-scripts/sops.sh
+RUN /usr/src/install-scripts/sops.sh --version="v3.9.0"
+
+# Install GitHub CLI
+COPY install-scripts/github-cli-lite.sh /usr/src/install-scripts/github-cli.sh
+RUN /usr/src/install-scripts/github-cli.sh --version="2.58.0"
+
+# Install jq
+COPY install-scripts/jq-lite.sh /usr/src/install-scripts/jq.sh
+RUN /usr/src/install-scripts/jq.sh --version="1.6-2.1"
+
+# Install yq
+COPY install-scripts/yq.sh /usr/src/install-scripts/yq.sh
+RUN /usr/src/install-scripts/yq.sh --version="3.1.0-3"
+
+# Install tfprepare
+COPY --from=tf-prepare-builder /workspace/tf-prepare /usr/local/bin/tf-prepare
+RUN chmod +x /usr/local/bin/tf-prepare
+
+#Cleanup
+RUN apt-get autoremove && \
+    apt-get clean
+
+RUN rm -rf /tmp/install
+
+COPY opa-policies /opt/opa-policies
+COPY terraform.sh /opt/terraform.sh
+
+ENV HOME=/work
+
+WORKDIR /work
