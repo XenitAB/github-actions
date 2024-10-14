@@ -9,7 +9,7 @@ on:
 jobs:
   pr_validation:
     name: '[LITE] PR Validation'
-    uses: ./.github/workflows/shared-steps.yml@afa4bad680ca1bbea899ce1ab3c8668b66f42ac9
+    uses: ./.github/workflows/shared-steps.yml
     with:
       registry: ghcr.io
       do_tag: 'NOPE'
