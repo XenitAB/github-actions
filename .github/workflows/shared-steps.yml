@@ -9,7 +9,7 @@ on:
         type: string # boolean exists, but that will be a string as ENV VAR. Set to YES or NOPE
     secrets:
       token:
-        required: true
+        required: false
 
 jobs:
   reusable:
