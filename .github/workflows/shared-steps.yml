@@ -31,7 +31,6 @@ jobs:
           password: ${{ secrets.token }}
         
       - name: Do some shell magic
-        if: ${{ github.event_name != 'pull_request'}}
         shell: bash
         id: sh_settings
         env:
@@ -44,7 +43,7 @@ jobs:
           fi
           echo "repository=${GITHUB_REPOSITORY@L}" >> $GITHUB_OUTPUT
               
-      - name: '[LITE] Build and push container image'
+      - name: '[LITE] Build container image, (and push)'
         id: push
         uses: docker/build-push-action@v6
         with:
