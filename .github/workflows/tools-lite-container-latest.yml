@@ -1,4 +1,4 @@
-name: Tools [LITE] Container - Publish
+name: '[LITE] Tools Container - Publish Latest'
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ jobs:
       packages: write
       attestations: write
       id-token: write
-    uses: .github/workflows/shared-steps.yml
+    uses: ./.github/workflows/shared-steps.yml@afa4bad680ca1bbea899ce1ab3c8668b66f42ac9
     with:
         registry: ghcr.io
         do_tag: 'NOPE'
