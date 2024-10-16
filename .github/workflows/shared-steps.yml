@@ -61,4 +61,5 @@ jobs:
           subject-name: ${{ inputs.registry }}/${{ steps.sh_settings.outputs.repository }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+          github-token: ${{ secrets.token }}
             
