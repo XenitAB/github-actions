@@ -54,11 +54,12 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: ${{github.event_name != 'pull_request'}}
         
-      - name: '[LITE] Generate artifact attestation'
-        if: ${{github.event_name != 'pull_request'}}
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-name: ${{ inputs.registry }}//${{ steps.sh_settings.outputs.repository }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+      #- name: '[LITE] Generate artifact attestation'
+      #  if: ${{github.event_name != 'pull_request'}}
+      # uses: actions/attest-build-provenance@v1
+      # with:
+      #   subject-name: ${{ inputs.registry }}/${{ steps.sh_settings.outputs.repository }}
+      #   subject-digest: ${{ steps.push.outputs.digest }}
+      #   push-to-registry: true
+      #   github-token: ${{ secrets.token }}
             
