@@ -12,7 +12,18 @@ jobs:
   publish_latest:
     name: Push latest container image to GitHub Packages
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
     steps:
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
       - name: Checkout
         uses: actions/checkout@v2
 
@@ -27,10 +38,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push container image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
-          cache-from: ghcr.io/xenitab/github-actions/tools:latest
+          platforms: ${{ matrix.platform }}
+          cache-from: ghcr.io/xenitab/github-actions/${{ matrix.platform }}/tf-wrapper:latest
           file: docker/Dockerfile
           context: docker
-          tags: ghcr.io/xenitab/github-actions/tools:latest
+          tags: ghcr.io/xenitab/github-actions/${{ matrix.platform }}/tf-wrapper:latest
           push: true

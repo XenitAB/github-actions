@@ -1,0 +1,12 @@
+subscription_id: "your-subscription-id"
+tenant_id: "your-tenant-id"
+resource_group_name: "your-resource-group-name"
+resource_group_location: "your-location"
+storage_account_name: "your-storage-account-name"
+storage_account_container: "your-container-name"
+key_vault_name: "your-keyvault-name"
+key_vault_key_name: "your-key-name"
+resource_locks: true
+exclude_cli_credential: false
+exclude_environment_credential: true
+exclude_msi_credential: true
