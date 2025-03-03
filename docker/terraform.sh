@@ -4,17 +4,37 @@ set -e
 ACTION=$1
 DIR=$2
 ENVIRONMENT=$3
-SUFFIX=$4
-OPA_BLAST_RADIUS=$5
+OPA_BLAST_RADIUS=$4
 
-RG_LOCATION_SHORT=${RG_LOCATION_SHORT:-we}
-RG_LOCATION_LONG=${RG_LOCATION_LONG:-westeurope}
-BACKEND_KEY="${BACKEND_KEY:-${ENVIRONMENT}.terraform.tfstate}"
-BACKEND_RG="${BACKEND_RG:-rg-${ENVIRONMENT}-${RG_LOCATION_SHORT}-${SUFFIX}}"
-BACKEND_KV="${BACKEND_KV:-kv-${ENVIRONMENT}-${RG_LOCATION_SHORT}-${SUFFIX}}"
+# Extract values from the .tfvars file
+TF_VAR_GLOBAL_PATH="/tmp/global.tfvars"
+LOCATION=$(grep -E '^location\s*=' $TF_VAR_GLOBAL_PATH | awk -F= '{print $2}' | tr -d ' "')
+SUFFIX=$(grep -E '^suffix\s*=' $TF_VAR_GLOBAL_PATH | awk -F= '{print $2}' | tr -d ' "')
+ENVIRONMENT=$(grep -E '^environment\s*=' $TF_VAR_GLOBAL_PATH | awk -F= '{print $2}' | tr -d ' "')
+
+# Map location to short name
+case $LOCATION in
+  "swedencentral")
+    LOCATION_SHORTNAME="swc"
+    ;;
+  "northeurope")
+    LOCATION_SHORTNAME="neu"
+    ;;
+  "westeurope")
+    LOCATION_SHORTNAME="weu"
+    ;;
+  *)
+    echo "ERROR: Unknown location $LOCATION"
+    exit 1
+    ;;
+esac
+
+BACKEND_RG="${BACKEND_RG:-rg-${ENVIRONMENT}-${LOCATION_SHORTNAME}-tfstate${SUFFIX}}"
+BACKEND_KV="${BACKEND_KV:-kv-${ENVIRONMENT}-${LOCATION_SHORTNAME}-tfstate${SUFFIX}}"
 BACKEND_KV_KEY="${BACKEND_KV_KEY:-sops}"
-BACKEND_NAME="${BACKEND_NAME:-sa${ENVIRONMENT}${RG_LOCATION_SHORT}${SUFFIX}}"
-CONTAINER_NAME="${CONTAINER_NAME:-tfstate-${DIR}}"
+BACKEND_NAME="${BACKEND_NAME:-sa${ENVIRONMENT}${LOCATION_SHORTNAME}tfstate${SUFFIX}}"
+BACKEND_CONTAINER_NAME="${CONTAINER_NAME:-tfstate-${DIR}}"
+BACKEND_KEY="${BACKEND_KEY:-${ENVIRONMENT}.terraform.tfstate}"
 
 export HELM_CACHE_HOME=/tmp/${DIR}/.helm_cache
 
@@ -22,25 +42,45 @@ if [ -z "${OPA_BLAST_RADIUS}" ]; then
   OPA_BLAST_RADIUS=50
 fi
 
+mkdir -p .terraform/plans
+
 prepare () {
   AZ_ACCOUNT_TYPE="$(az account show --query user.type --output tsv)"
-  if [[ "${AZ_ACCOUNT_TYPE}" = "servicePrincipal" ]]; then
-    export AZURE_SERVICE_PRINCIPAL_APP_ID="$(az account show --query user.name --output tsv)"
-    export AZURE_SERVICE_PRINCIPAL_OBJECT_ID="$(az ad sp show --id $AZURE_SERVICE_PRINCIPAL_APP_ID --query id --output tsv)"
+  
+  # if [[ "${AZ_ACCOUNT_TYPE}" = "servicePrincipal" ]]; then
+  #   export AZURE_SERVICE_PRINCIPAL_APP_ID="$(az account show --query user.name --output tsv)"
+  #   export AZURE_SERVICE_PRINCIPAL_OBJECT_ID="$(az ad sp show --id $AZURE_SERVICE_PRINCIPAL_APP_ID --query id --output tsv)"
+  # fi
+
+  cd /opt/tf-prepare
+
+  echo "Checking if resource group $RG exists..."
+  
+  # Check if the resource group exists
+  RG_EXISTS=$(az group show --name "$RG" --query "name" --output tsv 2> /dev/null || true)
+
+  if [[ -n "$RG_EXISTS" ]]; then
+    echo "$RG already exists; remove using ** tf-prepare.sh remove **"
+  else    
+    # Initialize and apply Terraform configuration
+    echo "Initializing Terraform..."
+    terraform init
+    
+    echo "Applying Terraform configuration..."
+    terraform plan -var-file TF_VAR_GLOBAL_PATH
+
+    # Run terraform apply and capture its exit status
+    if ! terraform apply -var-file TF_VAR_GLOBAL_PATH -auto-approve; then
+      echo "Terraform apply failed. Running terraform destroy to clean up..."
+      terraform destroy -var-file TF_VAR_GLOBAL_PATH -auto-approve
+      exit 1
+    fi
+
+    # Clean up Terraform files as the last step
+    echo "Cleaning up Terraform files..."
+    rm -rf .terraform*
+    rm -rf terraform.tfstate*
   fi
-  export AZURE_SUBSCRIPTION_ID=$(az account show --output tsv --query id)
-  export AZURE_TENANT_ID=$(az account show --output tsv --query tenantId)
-  export AZURE_RESOURCE_GROUP_NAME="${BACKEND_RG}"
-  export AZURE_RESOURCE_GROUP_LOCATION="${RG_LOCATION_LONG}"
-  export AZURE_STORAGE_ACCOUNT_NAME="${BACKEND_NAME}"
-  export AZURE_STORAGE_ACCOUNT_CONTAINER="${CONTAINER_NAME}"
-  export AZURE_KEYVAULT_NAME="${BACKEND_KV}"
-  export AZURE_KEYVAULT_KEY_NAME="${BACKEND_KV_KEY}"
-  export AZURE_RESOURCE_LOCKS="${AZURE_RESOURCE_LOCKS:-true}"
-  export AZURE_EXCLUDE_CLI_CREDENTIAL="${AZURE_EXCLUDE_CLI_CREDENTIAL:-false}"
-  export AZURE_EXCLUDE_ENVIRONMENT_CREDENTIAL="${AZURE_EXCLUDE_ENVIRONMENT_CREDENTIAL:-true}"
-  export AZURE_EXCLUDE_MSI_CREDENTIAL="${AZURE_EXCLUDE_MSI_CREDENTIAL:-true}"
-  tf-prepare azure
 }
 
 init () {
