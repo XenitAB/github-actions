@@ -15,14 +15,7 @@ locals {
   ### Location Shortname
   location_shortname = lookup(local.location_short_codes, lower(var.location), "unknown")
 
-## Resource Group
-  resource_group_name = "rg-${var.environment}-${local.location_shortname}-tfstate${var.suffix}"
-  
-## Storage Account
-  storage_account_name = "sa${var.environment}${local.location_shortname}tfstate${var.suffix}"
-
-## Key Vault
-  keyvault_name = "kv-${var.environment}-${local.location_shortname}-tfstate${var.suffix}"
+  ## Backend Key Name
   backend_kv_key = "sops"
 
 }

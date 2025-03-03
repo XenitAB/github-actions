@@ -8,9 +8,9 @@ OPA_BLAST_RADIUS=$4
 
 # Extract values from the .tfvars file
 TF_VAR_GLOBAL_PATH="/tmp/global.tfvars"
-LOCATION=$(grep -E '^location\s*=' $TF_VAR_GLOBAL_PATH | awk -F= '{print $2}' | tr -d ' "')
-SUFFIX=$(grep -E '^suffix\s*=' $TF_VAR_GLOBAL_PATH | awk -F= '{print $2}' | tr -d ' "')
-ENVIRONMENT=$(grep -E '^environment\s*=' $TF_VAR_GLOBAL_PATH | awk -F= '{print $2}' | tr -d ' "')
+LOCATION=$(grep -E '^location\s*=' ${TF_VAR_GLOBAL_PATH} | awk -F= '{print $2}' | tr -d ' "')
+SUFFIX=$(grep -E '^suffix\s*=' ${TF_VAR_GLOBAL_PATH} | awk -F= '{print $2}' | tr -d ' "')
+ENVIRONMENT=$(grep -E '^environment\s*=' ${TF_VAR_GLOBAL_PATH} | awk -F= '{print $2}' | tr -d ' "')
 
 # Map location to short name
 case $LOCATION in
@@ -67,16 +67,16 @@ prepare () {
     terraform init
     
     echo "Applying Terraform configuration..."
-    terraform plan -var-file TF_VAR_GLOBAL_PATH
+    terraform plan -var-file ${TF_VAR_GLOBAL_PATH}
 
-    # Run terraform apply and capture its exit status
-    if ! terraform apply -var-file TF_VAR_GLOBAL_PATH -auto-approve; then
+    # Terraform apply; if it fails, run terraform destroy to clean up
+    if ! terraform apply -var-file ${TF_VAR_GLOBAL_PATH} -auto-approve; then
       echo "Terraform apply failed. Running terraform destroy to clean up..."
-      terraform destroy -var-file TF_VAR_GLOBAL_PATH -auto-approve
+      terraform destroy -var-file ${TF_VAR_GLOBAL_PATH} -auto-approve
       exit 1
     fi
 
-    # Clean up Terraform files as the last step
+    # Clean up ./terraform incl. statefile
     echo "Cleaning up Terraform files..."
     rm -rf .terraform*
     rm -rf terraform.tfstate*
@@ -92,7 +92,7 @@ plan () {
   rm -f .terraform/plans/${ENVIRONMENT}
   init
   mkdir -p .terraform/plans
-  terraform plan -input=false -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="../global.tfvars" -out=".terraform/plans/${ENVIRONMENT}"
+  terraform plan -input=false -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="${${TF_VAR_GLOBAL_PATH}}" -out=".terraform/plans/${ENVIRONMENT}"
   terraform show -json .terraform/plans/${ENVIRONMENT} > .terraform/plans/${ENVIRONMENT}.json
   cat /opt/opa-policies/data.json | jq ".blast_radius = ${OPA_BLAST_RADIUS}" > /tmp/opa-data.json
   opa test /opt/opa-policies -v
@@ -135,7 +135,7 @@ destroy () {
   read VERIFICATION_INPUT
 
   if [[ "${VERIFICATION_INPUT}" == "${DIR}/${ENVIRONMENT}" ]]; then
-    terraform destroy -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="../global.tfvars"
+    terraform destroy -var-file="variables/${ENVIRONMENT}.tfvars" -var-file="variables/common.tfvars" -var-file="${${TF_VAR_GLOBAL_PATH}}"
   else
     echo "Wrong input detected (${VERIFICATION_INPUT}). Exiting..."
     exit 1
@@ -188,7 +188,7 @@ validate () {
   terraform validate
   terraform fmt .
   terraform fmt variables/
-  tflint --config="/work/.tflint.d/.tflint.hcl" --var-file="variables/${ENVIRONMENT}.tfvars" --var-file="variables/common.tfvars" --var-file="../global.tfvars" .
+  tflint --config="/work/.tflint.d/.tflint.hcl" --var-file="variables/${ENVIRONMENT}.tfvars" --var-file="variables/common.tfvars" --var-file="${${TF_VAR_GLOBAL_PATH}}" .
   tfsec .
 }
 
