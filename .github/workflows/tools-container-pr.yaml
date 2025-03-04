@@ -10,3 +10,4 @@ jobs:
     uses: ./.github/workflows/container-build-template.yml
     with:
       push: false
+      tag: "pr"
