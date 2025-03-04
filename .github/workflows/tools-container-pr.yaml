@@ -1,26 +1,15 @@
-name: Tools Container - PR Validation
+name: 'Tools Container - PR Validation'
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'docker/**'
 
 jobs:
   pr_validation:
-    name: PR Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Build container image
-        uses: docker/build-push-action@v2
-        with:
-          cache-from: ghcr.io/xenitab/github-actions/tools:latest
-          file: docker/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          context: docker
-          push: false
+    name: 'PR Validation'
+    uses: ./.github/workflows/shared-steps.yml
+    with:
+      registry: ghcr.io
+      do_tag: 'NOPE'

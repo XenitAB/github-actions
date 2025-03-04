@@ -37,24 +37,24 @@ jobs:
           DO_TAG: ${{inputs.do_tag}}
         run: |
           if [  $DO_TAG = 'YES' ]; then
-            echo "tag=lite-${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT  
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT  
           else
-            echo "tag=lite" >> $GITHUB_OUTPUT
+            echo "tag=" >> $GITHUB_OUTPUT
           fi
           echo "repository=${GITHUB_REPOSITORY@L}" >> $GITHUB_OUTPUT
               
-      - name: '[LITE] Build container image, (and push)'
+      - name: 'Build container image, (and push)'
         id: push
         uses: docker/build-push-action@v6
         with:
           cache-from: ${{inputs.registry}}/${{github.repository}}/tools:${{ steps.sh_settings.outputs.tag }}
-          file: docker/Dockerfile.lite
+          file: docker/Dockerfile
           context: docker
           tags: ${{inputs.registry}}/${{ steps.sh_settings.outputs.repository }}/tools:${{ steps.sh_settings.outputs.tag }}
           platforms: linux/amd64,linux/arm64
           push: ${{github.event_name != 'pull_request'}}
         
-      - name: '[LITE] Generate artifact attestation'
+      - name: 'Generate artifact attestation'
         if: ${{github.event_name != 'pull_request'}}
         uses: actions/attest-build-provenance@v1
         with:
