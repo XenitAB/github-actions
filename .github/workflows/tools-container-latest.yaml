@@ -31,6 +31,7 @@ jobs:
         with:
           cache-from: ghcr.io/xenitab/github-actions/tools:latest
           file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
           context: docker
           tags: ghcr.io/xenitab/github-actions/tools:latest
           push: true
