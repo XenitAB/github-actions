@@ -1,22 +1,25 @@
-name: 'Tools Container - Publish Tag'
+name: Tools Container - Publish Tag
 
 on:
-  workflow_dispatch:
   release:
     types:
       - published
 
 jobs:
-  publish_latest:
-    name: 'Push tagged container image to GitHub Packages'
-    permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-    uses: ./.github/workflows/shared-steps.yml
+  generate_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      date_tag: ${{ steps.get_date.outputs.date_tag }}
+    steps:
+      - name: Generate Tag
+        id: get_date
+        run: |
+          date=$(date -u +"%Y.%-m.%-d")
+          echo "date_tag=${date}" >> $GITHUB_OUTPUT
+
+  publish_tag:
+    needs: generate_tag
+    uses: ./.github/workflows/container-build-template.yml
     with:
-      registry: ghcr.io
-      do_tag: 'YES'
-    secrets: 
-      token: ${{ secrets.GITHUB_TOKEN }}
+      push: true
+      tag: ${{ needs.generate_tag.outputs.date_tag }}

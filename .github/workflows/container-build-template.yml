@@ -1,0 +1,56 @@
+name: Docker Build Template
+
+on:
+  workflow_call:
+    inputs:
+      push:
+        type: boolean
+        required: true
+      tag:
+        type: string
+        required: false
+      registry:
+        type: string
+        required: false
+        default: ghcr.io
+      platforms:
+        type: string
+        required: false
+        default: linux/amd64,linux/arm64
+
+jobs:
+  build:
+    name: Build and Push Container Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.token }}
+
+      - name: Build and push container image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: "${{ inputs.registry }}/${{ github.repository }}/tools:latest"
+          file: docker/Dockerfile
+          context: docker
+          tags: "${{ inputs.registry }}/${{ github.repository }}/tools:${{ inputs.tag }}"
+          platforms: ${{ inputs.platforms }}
+          push: ${{ inputs.push }}
+
+      - name: Generate Artifact Attestation
+        if: ${{ inputs.push }}
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ inputs.registry }}/${{ github.repository }}
+          subject-digest: ${{ steps.build-push.outputs.digest }}
+          push-to-registry: true

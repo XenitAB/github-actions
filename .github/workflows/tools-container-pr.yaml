@@ -1,15 +1,12 @@
-name: 'Tools Container - PR Validation'
+name: Tools Container - PR Validation
 
 on:
-  workflow_dispatch:
   pull_request:
     paths:
       - 'docker/**'
 
 jobs:
   pr_validation:
-    name: 'PR Validation'
-    uses: ./.github/workflows/shared-steps.yml
+    uses: ./.github/workflows/container-build-template.yml
     with:
-      registry: ghcr.io
-      do_tag: 'YES'
+      push: false

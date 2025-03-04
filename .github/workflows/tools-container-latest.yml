@@ -1,0 +1,15 @@
+name: Tools Container - Publish Latest
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docker/**'
+      - '.github/**'
+
+jobs:
+  publish_latest:
+    uses: ./.github/workflows/container-build-template.yml
+    with:
+      push: true
