@@ -1,9 +1,22 @@
+# Image used for the go-tf-prepare stage
+FROM golang:1.24 AS tf-prepare-builder
+WORKDIR /workspace
+
+COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
+RUN go mod download
+COPY ./go-tf-prepare/main.go main.go
+COPY ./go-tf-prepare/pkg/ pkg/
+RUN GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on go build -o tf-prepare main.go
+
 # Image used for the build stage
 FROM debian:stable-slim
 
 # Set build arguments for target architecture
 ARG TARGETARCH
 ARG TARGETOS
+
+# MKDIR
+RUN mkdir -p /work
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
