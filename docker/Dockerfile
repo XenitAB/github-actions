@@ -6,7 +6,9 @@ COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
 RUN go mod download
 COPY ./go-tf-prepare/main.go main.go
 COPY ./go-tf-prepare/pkg/ pkg/
-RUN GOOS=linux GOARCH=$TARGETARCH GO111MODULE=on go build -o tf-prepare main.go
+RUN GOOS=linux GOARCH=${TARGETARCH} GO111MODULE=on go build -o tf-prepare main.go
+
+# ------------------------------
 
 # Image used for the build stage
 FROM debian:stable-slim
@@ -20,10 +22,10 @@ RUN mkdir -p /work
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
     ca-certificates \
-    git \
     curl \
+    git \
+    make \
     openssl \
     unzip \
     gpg \
@@ -101,6 +103,8 @@ RUN apt-get autoremove && \
 # Copy additional files
 COPY ./opa-policies /opt/opa-policies
 COPY ./terraform.sh /opt/terraform.sh
+COPY --from=tf-prepare-builder /workspace/tf-prepare /usr/local/bin/tf-prepare
+RUN chmod +x /usr/local/bin/tf-prepare
 
 # Set environment variables
 ENV HOME=/work
