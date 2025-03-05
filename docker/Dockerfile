@@ -38,10 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Install Terraform
-RUN TERRAFORM_VERSION="1.11.0" && \
-    curl -LO "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip" && \
-    unzip terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip -d /usr/local/bin && \
-    rm terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip
+RUN TERRAFORM_VERSION="1.11.1" && \
+    curl -L -o terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip" && \
+    unzip terraform.zip -d /usr/local/bin && \
+    rm terraform.zip
 
 # Install tflint
 RUN TFLINT_VERSION="v0.55.1" && \
@@ -67,11 +67,10 @@ RUN TFSEC_VERSION="v1.28.13" && \
 
 # Install Open Policy Agent (OPA)
 RUN OPA_VERSION="v1.2.0" && \
-    curl -L -o opa "https://openpolicyagent.org/downloads/${OPA_VERSION}/opa_linux_${TARGETARCH}" && \
-    chmod +x opa && \
-    mv opa /usr/local/bin/
+    curl -L -o /usr/local/bin/opa "https://openpolicyagent.org/downloads/${OPA_VERSION}/opa_linux_${TARGETARCH}_static" && \
+    chmod +x /usr/local/bin/opa
 
-# Install sops
+# Install sopsh
 RUN SOPS_VERSION="v3.9.4" && \
     curl -L -o /usr/local/bin/sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.${TARGETARCH}" && \
     chmod +x /usr/local/bin/sops
@@ -85,9 +84,8 @@ RUN GH_VERSION="2.67.0" && \
 
 # Install kubectl
 RUN KUBECTL_VERSION="v1.32.0" && \
-    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" && \
-    chmod +x kubectl && \
-    mv kubectl /usr/local/bin/
+    curl -L -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" && \
+    chmod +x /usr/local/bin/kubectl
 
 # Install helm
 RUN HELM_VERSION="v3.17.0" && \
