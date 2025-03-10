@@ -49,9 +49,8 @@ RUN TFLINT_VERSION="v0.55.1" && \
     unzip tflint.zip -d /usr/local/bin && \
     rm tflint.zip
 
-# Install tflint rulesets
+# Copy tflint configuration
 COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
-RUN tflint --init --config=/work/.tflint.d/.tflint.hcl
 
 # Install terraform (tfenv)
 RUN TFENV_VERSION="1.11.0" && \
