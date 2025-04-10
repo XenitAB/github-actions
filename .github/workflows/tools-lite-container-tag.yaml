@@ -1,0 +1,22 @@
+name: '[LITE] Tools Container - Publish Tag'
+
+on:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+jobs:
+  publish_latest:
+    name: '[LITE] Push tagged container image to GitHub Packages'
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    uses: ./.github/workflows/shared-steps.yml
+    with:
+      registry: ghcr.io
+      do_tag: 'YES'
+    secrets: 
+      token: ${{ secrets.GITHUB_TOKEN }}

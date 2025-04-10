@@ -1,16 +1,16 @@
-name: Tools Container - Publish Tag
+name: Tools Container - Publish Latest
 
 on:
-  release:
-    types:
-      - published
+  push:
+    branches:
+      - main
     paths:
-      - "docker/**"
-      - ".github/**"
+      - 'docker/**'
+      - '.github/**'
 
 jobs:
   publish_latest:
-    name: Push tagged container image to GitHub Packages
+    name: Push latest container image to GitHub Packages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,16 +26,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get GitHub Tag
-        id: get_tag
-        run: |
-          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
       - name: Build and push container image
         uses: docker/build-push-action@v2
         with:
           cache-from: ghcr.io/xenitab/github-actions/tools:latest
           file: docker/Dockerfile
           context: docker
-          tags: ghcr.io/xenitab/github-actions/tools:${{ steps.get_tag.outputs.tag }}
+          tags: ghcr.io/xenitab/github-actions/tools:latest
           push: true

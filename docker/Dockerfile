@@ -1,121 +1,93 @@
-# Image used for the go-tf-prepare stage
-FROM golang:1.24 AS tf-prepare-builder
+FROM golang:1.21 AS tf-prepare-builder
 WORKDIR /workspace
 
 COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
 RUN go mod download
 COPY ./go-tf-prepare/main.go main.go
 COPY ./go-tf-prepare/pkg/ pkg/
-RUN GOOS=linux GOARCH=${TARGETARCH} GO111MODULE=on go build -o tf-prepare main.go
+RUN GOOS=linux GOARCH=amd64 GO111MODULE=on go build -o tf-prepare main.go
 
-# ------------------------------
+FROM debian:12.2-slim
 
-# Image used for the build stage
-FROM debian:stable-slim
+#Base
+RUN apt-get update -y
+RUN apt-get install -y git curl openssl pip make unzip gpg wget apt-utils
+RUN apt-get install -y ansible=7.7.0+dfsg-3+deb12u1
 
-# Set build arguments for target architecture
-ARG TARGETARCH
-ARG TARGETOS
-
-# MKDIR
-RUN mkdir -p /work
-
-# Install dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    git \
-    make \
-    openssl \
-    unzip \
-    gpg \
-    wget \
-    jq \
-    yq && \
-    rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /tmp/install /usr/src /work
+WORKDIR /tmp/install
 
 # Install Azure CLI
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+COPY install-scripts/azure-cli.sh /usr/src/install-scripts/azure-cli.sh
+RUN /usr/src/install-scripts/azure-cli.sh --version="2.55.0"
 
-# Install Terraform
-RUN TERRAFORM_VERSION="1.11.4" && \
-    curl -L -o terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip" && \
-    unzip terraform.zip -d /usr/local/bin && \
-    rm terraform.zip
+# Install AWS CLI
+COPY install-scripts/aws-cli.sh /usr/src/install-scripts/aws-cli.sh
+RUN /usr/src/install-scripts/aws-cli.sh --version="2.14.5"
 
 # Install tflint
-RUN TFLINT_VERSION="v0.55.1" && \
-    curl -L -o tflint.zip "https://github.com/terraform-linters/tflint/releases/download/${TFLINT_VERSION}/tflint_linux_${TARGETARCH}.zip" && \
-    unzip tflint.zip -d /usr/local/bin && \
-    rm tflint.zip && \
-    mkdir -p /work/.tflint.d/plugins/
-
-# Install tflint rulesets && copy tflint configuration
+COPY install-scripts/tflint.sh /usr/src/install-scripts/tflint.sh
+RUN /usr/src/install-scripts/tflint.sh --version="v0.49.0" --sha="56d862054e8f71e3ba392c6617fca2d730b5ecdf8a4a0768ba6087406dcc7d63"
 COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
 
-RUN AZURERM_RULESET_VERSION="v0.28.0" && \
-    curl -L -o tflint-ruleset-azurerm.zip "https://github.com/terraform-linters/tflint-ruleset-azurerm/releases/download/${AZURERM_RULESET_VERSION}/tflint-ruleset-azurerm_linux_${TARGETARCH}.zip" && \
-    unzip tflint-ruleset-azurerm.zip -d /work/.tflint.d/plugins/ && \
-    rm tflint-ruleset-azurerm.zip
-
-RUN AWS_RULESET_VERSION="v0.38.0" && \
-    curl -L -o tflint-ruleset-aws.zip "https://github.com/terraform-linters/tflint-ruleset-aws/releases/download/${AWS_RULESET_VERSION}/tflint-ruleset-aws_linux_${TARGETARCH}.zip" && \
-    unzip tflint-ruleset-aws.zip -d /work/.tflint.d/plugins/ && \
-    rm tflint-ruleset-aws.zip
+# Install tflint ruleset
+COPY install-scripts/tflint-ruleset.sh /usr/src/install-scripts/tflint-ruleset.sh
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="azurerm" --version="v0.25.1" --sha="a0812b02b93dfbfcfb9521a665be249b025ee074f60943e5b5eb1869dbb36ee0"
+RUN /usr/src/install-scripts/tflint-ruleset.sh --ruleset="aws" --version="v0.28.0" --sha="f099944a68e464665dfd4067b663ff6c68229b703d5dff9faea789d3974b078a"
 
 # Install terraform (tfenv)
-RUN TFENV_VERSION="1.11.0" && \
-    git clone https://github.com/tfutils/tfenv.git ~/.tfenv && \
-    echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bashrc && \
-    ~/.tfenv/bin/tfenv install ${TFENV_VERSION} && \
-    ~/.tfenv/bin/tfenv use ${TFENV_VERSION}
+COPY install-scripts/tfenv.sh /usr/src/install-scripts/tfenv.sh
+RUN /usr/src/install-scripts/tfenv.sh --latest-terraform-version="1.5.7" --tfenv-version="v3.0.0"
 
 # Install tfsec
-RUN TFSEC_VERSION="v1.28.13" && \
-    curl -L -o /usr/local/bin/tfsec "https://github.com/aquasecurity/tfsec/releases/download/${TFSEC_VERSION}/tfsec-linux-${TARGETARCH}" && \
-    chmod +x /usr/local/bin/tfsec
+COPY install-scripts/tfsec.sh /usr/src/install-scripts/tfsec.sh
+RUN /usr/src/install-scripts/tfsec.sh --version="v1.28.4" --sha="ecd6c40122835356b78d9488328c2c1c186a1a03c8ae00c6a33ba1c08909a4d9"
 
-# Install Open Policy Agent (OPA)
-RUN OPA_VERSION="v1.3.0" && \
-    curl -L -o /usr/local/bin/opa "https://openpolicyagent.org/downloads/${OPA_VERSION}/opa_linux_${TARGETARCH}_static" && \
-    chmod +x /usr/local/bin/opa
+# Install Open Policy Agent
+COPY install-scripts/opa.sh /usr/src/install-scripts/opa.sh
+RUN /usr/src/install-scripts/opa.sh --version="v0.43.0" --sha="d5337139a7ccb04149bd9f96ab7a1641a3e3c39f6e1fffa610c7a5c054b0881f"
 
-# Install sopsh
-RUN SOPS_VERSION="v3.9.4" && \
-    curl -L -o /usr/local/bin/sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.${TARGETARCH}" && \
-    chmod +x /usr/local/bin/sops
+# Install sops
+COPY install-scripts/sops.sh /usr/src/install-scripts/sops.sh
+RUN /usr/src/install-scripts/sops.sh --version="v3.8.1" --sha="d6bf07fb61972127c9e0d622523124c2d81caf9f7971fb123228961021811697"
 
 # Install GitHub CLI
-RUN GH_VERSION="2.67.0" && \
-    curl -L -o gh.tar.gz "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${TARGETARCH}.tar.gz" && \
-    tar -xzf gh.tar.gz && \
-    mv gh_*/bin/gh /usr/local/bin/ && \
-    rm -rf gh_*
+COPY install-scripts/github-cli.sh /usr/src/install-scripts/github-cli.sh
+RUN /usr/src/install-scripts/github-cli.sh --version="2.39.2" --sha="460d270662f80b8314928ff80ac36db619b8bbac281a1331afd0d6e822f40426"
+
+# Install jq
+COPY install-scripts/jq.sh /usr/src/install-scripts/jq.sh
+RUN /usr/src/install-scripts/jq.sh --version="1.7" --sha="2f312b9587b1c1eddf3a53f9a0b7d276b9b7b94576c85bda22808ca950569716"
+
+# Install yq
+COPY install-scripts/yq.sh /usr/src/install-scripts/yq.sh
+RUN /usr/src/install-scripts/yq.sh --version="3.1.0-3"
 
 # Install kubectl
-RUN KUBECTL_VERSION="v1.32.0" && \
-    curl -L -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" && \
-    chmod +x /usr/local/bin/kubectl
+COPY install-scripts/kubectl.sh /usr/src/install-scripts/kubectl.sh
+RUN /usr/src/install-scripts/kubectl.sh --version="v1.28.4" --sha="893c92053adea6edbbd4e959c871f5c21edce416988f968bec565d115383f7b8"
 
 # Install helm
-RUN HELM_VERSION="v3.17.0" && \
-    curl -fsSL -o get_helm.sh "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3" && \
-    chmod 700 get_helm.sh && \
-    ./get_helm.sh --version "$HELM_VERSION" && \
-    rm get_helm.sh
+COPY install-scripts/helm.sh /usr/src/install-scripts/helm.sh
+RUN /usr/src/install-scripts/helm.sh --version="v3.13.2" --sha="55a8e6dce87a1e52c61e0ce7a89bf85b38725ba3e8deb51d4a08ade8a2c70b2d"
 
-# Cleanup
-RUN apt-get autoremove && \
-    apt-get clean
-
-# Copy additional files
-COPY ./opa-policies /opt/opa-policies
-COPY ./terraform.sh /opt/terraform.sh
 COPY --from=tf-prepare-builder /workspace/tf-prepare /usr/local/bin/tf-prepare
 RUN chmod +x /usr/local/bin/tf-prepare
 
-# Set environment variables
+# Install packer
+COPY install-scripts/packer.sh /usr/src/install-scripts/packer.sh
+RUN /usr/src/install-scripts/packer.sh --version="1.9.4" --sha="6cd5269c4245aa8c99e551d1b862460d63fe711c58bec618fade25f8492e80d9"
+
+#Cleanup
+RUN apt-get autoremove && \
+    apt-get clean
+
+RUN rm -rf /tmp/install
+
+COPY opa-policies /opt/opa-policies
+COPY terraform.sh /opt/terraform.sh
+COPY packer.sh /opt/packer.sh
+
 ENV HOME=/work
 
-# Set working directory
 WORKDIR /work
