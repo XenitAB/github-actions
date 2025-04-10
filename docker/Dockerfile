@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Install Terraform
-RUN TERRAFORM_VERSION="1.11.3" && \
+RUN TERRAFORM_VERSION="1.11.4" && \
     curl -L -o terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip" && \
     unzip terraform.zip -d /usr/local/bin && \
     rm terraform.zip
