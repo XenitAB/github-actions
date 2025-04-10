@@ -50,10 +50,10 @@ jobs:
           platforms: ${{ inputs.platforms }}
           push: ${{ inputs.push }}
 
-      - name: Generate Artifact Attestation
-        if: ${{ inputs.push }}
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ghcr.io/${{ steps.repository_to_lower_case.outputs.repo_lower }}
-          subject-digest: ${{ steps.build-push.outputs.digest }}
-          push-to-registry: true
+      # - name: Generate Artifact Attestation
+      #   if: ${{ inputs.push }}
+      #   uses: actions/attest-build-provenance@v2
+      #   with:
+      #     subject-name: ghcr.io/${{ steps.repository_to_lower_case.outputs.repo_lower }}
+      #     subject-digest: ${{ steps.build-push.outputs.digest }}
+      #     push-to-registry: true
