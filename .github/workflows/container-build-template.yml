@@ -9,6 +9,7 @@ on:
       tag:
         type: string
         required: false
+        default: latest
       platforms:
         type: string
         required: false
@@ -26,9 +27,9 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Convert Repository Name to Lowercase
-        id: repository_to_lower_case
+        id: repo_lower
         run: |
-          echo "repo_lower=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "repo_lower=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Login to GitHub Container Registry
         if: ${{ inputs.push }}
@@ -42,10 +43,10 @@ jobs:
         id: build-push
         uses: docker/build-push-action@v6
         with:
-          cache-from: "ghcr.io/${{ steps.repository_to_lower_case.outputs.repo_lower }}/tools:latest"
+          cache-from: "ghcr.io/${{ steps.repo_lower.outputs.repo_lower }}/tools:latest"
           file: docker/Dockerfile
           context: docker
-          tags: "ghcr.io/${{ steps.repository_to_lower_case.outputs.repo_lower }}/tools:${{ inputs.tag }}"
+          tags: "ghcr.io/${{ steps.repo_lower.outputs.repo_lower }}/tools:${{ inputs.tag }}"
           platforms: ${{ inputs.platforms }}
           push: ${{ inputs.push }}
 
