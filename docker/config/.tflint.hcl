@@ -1,15 +1,15 @@
 config {
-  module = false
+  call_module_type = "local"
   force = false
   disabled_by_default = false
 }
 
 plugin "azurerm" {
-    enabled = true
+  enabled = true
 }
 
 plugin "aws" {
-    enabled = true
+  enabled = true
 }
 
 rule "terraform_deprecated_interpolation" {
