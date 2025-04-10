@@ -148,7 +148,6 @@ validate () {
   terraform validate
   terraform fmt .
   terraform fmt variables/
-  tflint --init --config "/work/.tflint.d/.tflint.hcl"
   tflint --recursive --config="/work/.tflint.d/.tflint.hcl" --var-file="variables/${ENVIRONMENT}.tfvars" --var-file="variables/common.tfvars" --var-file="../global.tfvars"
   tfsec .
 }

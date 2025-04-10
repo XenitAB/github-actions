@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Install Terraform
-RUN TERRAFORM_VERSION="1.11.1" && \
+RUN TERRAFORM_VERSION="1.11.3" && \
     curl -L -o terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip" && \
     unzip terraform.zip -d /usr/local/bin && \
     rm terraform.zip
@@ -47,10 +47,21 @@ RUN TERRAFORM_VERSION="1.11.1" && \
 RUN TFLINT_VERSION="v0.55.1" && \
     curl -L -o tflint.zip "https://github.com/terraform-linters/tflint/releases/download/${TFLINT_VERSION}/tflint_linux_${TARGETARCH}.zip" && \
     unzip tflint.zip -d /usr/local/bin && \
-    rm tflint.zip
+    rm tflint.zip && \
+    mkdir -p /work/.tflint.d/plugins/
 
-# Copy tflint configuration
+# Install tflint rulesets && copy tflint configuration
 COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
+
+RUN AZURERM_RULESET_VERSION="v0.28.0" && \
+    curl -L -o tflint-ruleset-azurerm.zip "https://github.com/terraform-linters/tflint-ruleset-azurerm/releases/download/${AZURERM_RULESET_VERSION}/tflint-ruleset-azurerm_linux_${TARGETARCH}.zip" && \
+    unzip tflint-ruleset-azurerm.zip -d /work/.tflint.d/plugins/ && \
+    rm tflint-ruleset-azurerm.zip
+
+RUN AWS_RULESET_VERSION="v0.38.0" && \
+    curl -L -o tflint-ruleset-aws.zip "https://github.com/terraform-linters/tflint-ruleset-aws/releases/download/${AWS_RULESET_VERSION}/tflint-ruleset-aws_linux_${TARGETARCH}.zip" && \
+    unzip tflint-ruleset-aws.zip -d /work/.tflint.d/plugins/ && \
+    rm tflint-ruleset-aws.zip
 
 # Install terraform (tfenv)
 RUN TFENV_VERSION="1.11.0" && \
@@ -65,7 +76,7 @@ RUN TFSEC_VERSION="v1.28.13" && \
     chmod +x /usr/local/bin/tfsec
 
 # Install Open Policy Agent (OPA)
-RUN OPA_VERSION="v1.2.0" && \
+RUN OPA_VERSION="v1.3.0" && \
     curl -L -o /usr/local/bin/opa "https://openpolicyagent.org/downloads/${OPA_VERSION}/opa_linux_${TARGETARCH}_static" && \
     chmod +x /usr/local/bin/opa
 
