@@ -11,7 +11,7 @@ RUN GOOS=linux GOARCH=${TARGETARCH} GO111MODULE=on go build -o tf-prepare main.g
 # ------------------------------
 
 # Image used for the build stage
-FROM debian:stable-slim
+FROM debian:bookworm-slim
 
 # Set build arguments for target architecture
 ARG TARGETARCH
@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mkdir -p /etc/apt/keyrings
 
 # Install Azure CLI
-RUN AZ_CLI_VERSION="2.73.0" && \
+RUN AZ_CLI_VERSION="2.80.0" && \
     curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" \
       > /etc/apt/sources.list.d/azure-cli.list && \
@@ -49,13 +49,13 @@ RUN AZ_CLI_VERSION="2.73.0" && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Terraform
-RUN TERRAFORM_VERSION="1.11.4" && \
+RUN TERRAFORM_VERSION="1.14.0" && \
     curl -L -o terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip" && \
     unzip terraform.zip -d /usr/local/bin && \
     rm terraform.zip
 
 # Install tflint
-RUN TFLINT_VERSION="v0.55.1" && \
+RUN TFLINT_VERSION="v0.60.0" && \
     curl -L -o tflint.zip "https://github.com/terraform-linters/tflint/releases/download/${TFLINT_VERSION}/tflint_linux_${TARGETARCH}.zip" && \
     unzip tflint.zip -d /usr/local/bin && \
     rm tflint.zip && \
@@ -64,18 +64,18 @@ RUN TFLINT_VERSION="v0.55.1" && \
 # Install tflint rulesets && copy tflint configuration
 COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
 
-RUN AZURERM_RULESET_VERSION="v0.28.0" && \
+RUN AZURERM_RULESET_VERSION="v0.30.0" && \
     curl -L -o tflint-ruleset-azurerm.zip "https://github.com/terraform-linters/tflint-ruleset-azurerm/releases/download/${AZURERM_RULESET_VERSION}/tflint-ruleset-azurerm_linux_${TARGETARCH}.zip" && \
     unzip tflint-ruleset-azurerm.zip -d /work/.tflint.d/plugins/ && \
     rm tflint-ruleset-azurerm.zip
 
-RUN AWS_RULESET_VERSION="v0.38.0" && \
+RUN AWS_RULESET_VERSION="v0.44.0" && \
     curl -L -o tflint-ruleset-aws.zip "https://github.com/terraform-linters/tflint-ruleset-aws/releases/download/${AWS_RULESET_VERSION}/tflint-ruleset-aws_linux_${TARGETARCH}.zip" && \
     unzip tflint-ruleset-aws.zip -d /work/.tflint.d/plugins/ && \
     rm tflint-ruleset-aws.zip
 
 # Install terraform (tfenv)
-RUN TFENV_VERSION="1.11.0" && \
+RUN TFENV_VERSION="1.14.0" && \
     git clone https://github.com/tfutils/tfenv.git ~/.tfenv && \
     echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bashrc && \
     ~/.tfenv/bin/tfenv install ${TFENV_VERSION} && \
