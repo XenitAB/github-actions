@@ -12,11 +12,13 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armlocks"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 
 	adapter "github.com/microsoft/kiota-authentication-azure-go"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
@@ -60,6 +62,8 @@ func CreateResourceGroup(ctx context.Context, cred azcore.TokenCredential, confi
 	log.Info("Azure Resource Group already exists", "resourceGroupName", resourceGroupName)
 	return nil
 }
+
+const keyVaultCryptoOfficerRoleName = "Key Vault Crypto Officer"
 
 // CreateStorageAccount creates Azure Storage Account (if it doesn't exist) or returns error
 func CreateStorageAccount(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
@@ -283,8 +287,30 @@ func CreateKeyVault(ctx context.Context, cred azcore.TokenCredential, config azu
 
 	_, err = client.Get(ctx, resourceGroupName, keyVaultName, nil)
 	if err == nil {
-		log.Info("Azure KeyVault already exists", "keyVaultName", keyVaultName)
-		return nil
+		updateRes, err := client.Update(
+			ctx,
+			resourceGroupName,
+			keyVaultName,
+			armkeyvault.VaultPatchParameters{
+				Properties: &armkeyvault.VaultPatchProperties{
+					EnableRbacAuthorization: to.Ptr(true),
+				},
+			},
+			nil,
+		)
+		if err != nil {
+			log.Error(err, "client.Update")
+			return err
+		}
+
+		if updateRes.Vault.Properties.EnableRbacAuthorization != nil && *updateRes.Vault.Properties.EnableRbacAuthorization {
+			log.Info("Azure KeyVault already exists and RBAC authorization is enabled", "keyVaultName", keyVaultName)
+			return nil
+		}
+
+		err = fmt.Errorf("key vault exists but could not enable RBAC authorization")
+		log.Error(err, "client.Update", "keyVaultName", keyVaultName)
+		return err
 	}
 
 	if err != nil && strings.Contains(err.Error(), "ResourceNotFound") {
@@ -311,7 +337,7 @@ func CreateKeyVault(ctx context.Context, cred azcore.TokenCredential, config azu
 						Family: to.Ptr(armkeyvault.SKUFamilyA),
 						Name:   to.Ptr(armkeyvault.SKUNameStandard),
 					},
-					AccessPolicies: []*armkeyvault.AccessPolicyEntry{},
+					EnableRbacAuthorization: to.Ptr(true),
 				},
 			}, nil)
 		if err != nil {
@@ -333,8 +359,8 @@ func CreateKeyVault(ctx context.Context, cred azcore.TokenCredential, config azu
 	return fmt.Errorf("Failed Azure/CreateKeyVault/client.Get: %v", err)
 }
 
-// CreateKeyVaultAccessPolicy creates Azure Key Vault Access Policy (if it doesn't exist) or returns error
-func CreateKeyVaultAccessPolicy(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
+// CreateKeyVaultRoleAssignment creates Azure Key Vault RBAC Role Assignment (if it doesn't exist) or returns error
+func CreateKeyVaultRoleAssignment(ctx context.Context, cred azcore.TokenCredential, config azureConfig) error {
 	resourceGroupName := config.ResourceGroupName
 	keyVaultName := config.KeyVaultName
 	subscriptionID := config.SubscriptionID
@@ -358,60 +384,92 @@ func CreateKeyVaultAccessPolicy(ctx context.Context, cred azcore.TokenCredential
 		currentUserObjectID = servicePrincipalObjectID
 	}
 
-	client, err := armkeyvault.NewVaultsClient(subscriptionID, cred, &arm.ClientOptions{})
+	vaultClient, err := armkeyvault.NewVaultsClient(subscriptionID, cred, &arm.ClientOptions{})
 	if err != nil {
 		return err
 	}
 
-	keyPermissions := armkeyvault.Permissions{
-		Keys: []*armkeyvault.KeyPermissions{
-			to.Ptr(armkeyvault.KeyPermissionsUpdate),
-			to.Ptr(armkeyvault.KeyPermissionsCreate),
-			to.Ptr(armkeyvault.KeyPermissionsGet),
-			to.Ptr(armkeyvault.KeyPermissionsList),
-			to.Ptr(armkeyvault.KeyPermissionsEncrypt),
-			to.Ptr(armkeyvault.KeyPermissionsDecrypt),
-		},
-	}
-
-	accessPolicies := []*armkeyvault.AccessPolicyEntry{
-		{
-			TenantID:    &tenantID,
-			ObjectID:    &currentUserObjectID,
-			Permissions: &keyPermissions,
-		},
-	}
-
-	properties := armkeyvault.VaultAccessPolicyProperties{AccessPolicies: accessPolicies}
-	parameters := armkeyvault.VaultAccessPolicyParameters{Properties: &properties}
-	options := armkeyvault.VaultsClientUpdateAccessPolicyOptions{}
-
-	kv, err := client.Get(ctx, resourceGroupName, keyVaultName, nil)
+	vault, err := vaultClient.Get(ctx, resourceGroupName, keyVaultName, nil)
 	if err != nil {
-		log.Error(err, "client.Get")
+		log.Error(err, "vaultClient.Get")
 		return err
 	}
 
-	// Loop through all access policies
-	for _, accessPolicy := range kv.Vault.Properties.AccessPolicies {
-		// Check if the current object id for the access policy is the same as the current user object id
-		if *accessPolicy.ObjectID == currentUserObjectID {
-			// Check if the Key Permissions in the access policy are the same as the required Key Permissions
-			if keyPermissionsEqual(accessPolicy.Permissions.Keys, keyPermissions.Keys) {
-				// If the correct Key Permissions already exists, return early
-				log.Info("Azure KeyVault Access Policy already correct", "currentUserObjectID", currentUserObjectID)
-				return nil
+	if vault.Vault.Properties.EnableRbacAuthorization == nil || !*vault.Vault.Properties.EnableRbacAuthorization {
+		err := fmt.Errorf("key vault is not configured for RBAC authorization")
+		log.Error(err, "vaultClient.Get", "keyVaultName", keyVaultName)
+		return err
+	}
+
+	scope := *vault.ID
+
+	roleDefinitionsClient, err := armauthorization.NewRoleDefinitionsClient(cred, &arm.ClientOptions{})
+	if err != nil {
+		log.Error(err, "armauthorization.NewRoleDefinitionsClient")
+		return err
+	}
+
+	filter := fmt.Sprintf("roleName eq '%s'", keyVaultCryptoOfficerRoleName)
+	pager := roleDefinitionsClient.NewListPager(scope, &armauthorization.RoleDefinitionsClientListOptions{Filter: &filter})
+
+	var roleDefinitionID string
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			log.Error(err, "roleDefinitionsClient.NewListPager.NextPage")
+			return err
+		}
+
+		for _, roleDefinition := range page.Value {
+			if roleDefinition.Properties != nil && roleDefinition.Properties.RoleName != nil && *roleDefinition.Properties.RoleName == keyVaultCryptoOfficerRoleName {
+				roleDefinitionID = *roleDefinition.ID
+				break
 			}
+		}
+
+		if roleDefinitionID != "" {
+			break
 		}
 	}
 
-	_, err = client.UpdateAccessPolicy(ctx, resourceGroupName, keyVaultName, armkeyvault.AccessPolicyUpdateKindAdd, parameters, &options)
-	if err != nil {
-		log.Error(err, "client.UpdateAccessPolicy")
+	if roleDefinitionID == "" {
+		err := fmt.Errorf("unable to find role definition %s", keyVaultCryptoOfficerRoleName)
+		log.Error(err, "roleDefinitionsClient.NewListPager")
 		return err
 	}
 
-	log.Info("Azure KeyVault Access Policy created or updated", "currentUserObjectID", currentUserObjectID)
+	roleAssignmentsClient, err := armauthorization.NewRoleAssignmentsClient(subscriptionID, cred, &arm.ClientOptions{})
+	if err != nil {
+		log.Error(err, "armauthorization.NewRoleAssignmentsClient")
+		return err
+	}
+
+	roleAssignmentName := uuid.NewSHA1(uuid.NameSpaceURL, []byte(fmt.Sprintf("%s|%s|%s", scope, currentUserObjectID, roleDefinitionID))).String()
+
+	_, err = roleAssignmentsClient.Create(
+		ctx,
+		scope,
+		roleAssignmentName,
+		armauthorization.RoleAssignmentCreateParameters{
+			Properties: &armauthorization.RoleAssignmentProperties{
+				PrincipalID:      &currentUserObjectID,
+				RoleDefinitionID: &roleDefinitionID,
+			},
+		},
+		nil,
+	)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "RoleAssignmentExists") {
+			log.Info("Azure KeyVault RBAC Role Assignment already exists", "currentUserObjectID", currentUserObjectID, "roleName", keyVaultCryptoOfficerRoleName)
+			return nil
+		}
+
+		log.Error(err, "roleAssignmentsClient.Create")
+		return err
+	}
+
+	log.Info("Azure KeyVault RBAC Role Assignment created", "currentUserObjectID", currentUserObjectID, "roleName", keyVaultCryptoOfficerRoleName)
 
 	return nil
 }
@@ -552,27 +610,4 @@ func getCurrentUserObjectID(ctx context.Context, cred azcore.TokenCredential, te
 	id := me.GetId()
 
 	return *id, nil
-}
-
-func keyPermissionsEqual(a, b []*armkeyvault.KeyPermissions) bool {
-	if (a == nil) != (b == nil) {
-		return false
-	}
-
-	if len(a) != len(b) {
-		return false
-	}
-
-OUTER:
-	for _, i := range a {
-		for _, j := range b {
-			// a may have the first letters uppercase while b always have them lowercase
-			if strings.ToLower(string(*i)) == strings.ToLower(string(*j)) {
-				continue OUTER
-			}
-		}
-		return false
-	}
-
-	return true
 }

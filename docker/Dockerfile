@@ -41,11 +41,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Azure CLI
 RUN AZ_CLI_VERSION="2.73.0" && \
+    AZ_CLI_DISTRO="$(lsb_release -cs)" && \
+    if [ "${AZ_CLI_DISTRO}" = "trixie" ]; then AZ_CLI_DISTRO="bookworm"; fi && \
     curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" \
-      > /etc/apt/sources.list.d/azure-cli.list && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ ${AZ_CLI_DISTRO} main" \
+    > /etc/apt/sources.list.d/azure-cli.list && \
     apt-get update && \
-    apt-get install -y --no-install-recommends azure-cli=${AZ_CLI_VERSION}-1~$(lsb_release -cs) && \
+    if apt-cache madison azure-cli | awk '{ print $3 }' | grep -qx "${AZ_CLI_VERSION}-1~${AZ_CLI_DISTRO}"; then \
+    apt-get install -y --no-install-recommends "azure-cli=${AZ_CLI_VERSION}-1~${AZ_CLI_DISTRO}"; \
+    else \
+    apt-get install -y --no-install-recommends azure-cli; \
+    fi && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Terraform

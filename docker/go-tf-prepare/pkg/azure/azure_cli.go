@@ -187,7 +187,7 @@ func Action(ctx context.Context, cli *cli.Context) error {
 		}
 	}
 
-	err = CreateKeyVaultAccessPolicy(ctx, cred, config)
+	err = CreateKeyVaultRoleAssignment(ctx, cred, config)
 	if err != nil {
 		return err
 	}
