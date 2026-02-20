@@ -13,6 +13,7 @@ require (
 	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/stdr v1.2.2
 	github.com/go-playground/validator/v10 v10.16.0
+	github.com/google/uuid v1.4.0
 	github.com/microsoft/kiota-authentication-azure-go v1.0.1
 	github.com/microsoftgraph/msgraph-sdk-go v1.26.0
 	github.com/urfave/cli/v2 v2.26.0
@@ -27,10 +28,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
-	github.com/google/uuid v1.4.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/microsoft/kiota-abstractions-go v1.5.3 // indirect
@@ -46,7 +44,6 @@ require (
 	github.com/std-uritemplate/std-uritemplate/go v0.0.48 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.opentelemetry.io/otel v1.21.0 // indirect
 	go.opentelemetry.io/otel/metric v1.21.0 // indirect
 	go.opentelemetry.io/otel/trace v1.21.0 // indirect

@@ -6,7 +6,7 @@ COPY ./go-tf-prepare/go.mod ./go-tf-prepare/go.sum ./
 RUN go mod download
 COPY ./go-tf-prepare/main.go main.go
 COPY ./go-tf-prepare/pkg/ pkg/
-RUN GOOS=linux GOARCH=${TARGETARCH} GO111MODULE=on go build -o tf-prepare main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} GO111MODULE=on go build -ldflags='-s -w' -o tf-prepare main.go
 
 # ------------------------------
 
@@ -23,24 +23,20 @@ RUN mkdir -p /work
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-transport-https \
-    apt-utils \
     ca-certificates \
     curl \
     git \
     make \
-    openssl \
     unzip \
     gpg \
     gnupg \
     lsb-release \
-    wget \
-    jq \
-    yq && \
+    jq && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /etc/apt/keyrings
 
 # Install Azure CLI
-RUN AZ_CLI_VERSION="2.73.0" && \
+RUN AZ_CLI_VERSION="2.83.0" && \
     AZ_CLI_DISTRO="$(lsb_release -cs)" && \
     if [ "${AZ_CLI_DISTRO}" = "trixie" ]; then AZ_CLI_DISTRO="bookworm"; fi && \
     curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg && \
@@ -55,13 +51,13 @@ RUN AZ_CLI_VERSION="2.73.0" && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Terraform
-RUN TERRAFORM_VERSION="1.11.4" && \
+RUN TERRAFORM_VERSION="1.14.5" && \
     curl -L -o terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TARGETARCH}.zip" && \
     unzip terraform.zip -d /usr/local/bin && \
     rm terraform.zip
 
 # Install tflint
-RUN TFLINT_VERSION="v0.55.1" && \
+RUN TFLINT_VERSION="v0.61.0" && \
     curl -L -o tflint.zip "https://github.com/terraform-linters/tflint/releases/download/${TFLINT_VERSION}/tflint_linux_${TARGETARCH}.zip" && \
     unzip tflint.zip -d /usr/local/bin && \
     rm tflint.zip && \
@@ -70,56 +66,25 @@ RUN TFLINT_VERSION="v0.55.1" && \
 # Install tflint rulesets && copy tflint configuration
 COPY config/.tflint.hcl /work/.tflint.d/.tflint.hcl
 
-RUN AZURERM_RULESET_VERSION="v0.28.0" && \
+RUN AZURERM_RULESET_VERSION="v0.31.0" && \
     curl -L -o tflint-ruleset-azurerm.zip "https://github.com/terraform-linters/tflint-ruleset-azurerm/releases/download/${AZURERM_RULESET_VERSION}/tflint-ruleset-azurerm_linux_${TARGETARCH}.zip" && \
     unzip tflint-ruleset-azurerm.zip -d /work/.tflint.d/plugins/ && \
     rm tflint-ruleset-azurerm.zip
 
-RUN AWS_RULESET_VERSION="v0.38.0" && \
-    curl -L -o tflint-ruleset-aws.zip "https://github.com/terraform-linters/tflint-ruleset-aws/releases/download/${AWS_RULESET_VERSION}/tflint-ruleset-aws_linux_${TARGETARCH}.zip" && \
-    unzip tflint-ruleset-aws.zip -d /work/.tflint.d/plugins/ && \
-    rm tflint-ruleset-aws.zip
-
-# Install terraform (tfenv)
-RUN TFENV_VERSION="1.11.0" && \
-    git clone https://github.com/tfutils/tfenv.git ~/.tfenv && \
-    echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bashrc && \
-    ~/.tfenv/bin/tfenv install ${TFENV_VERSION} && \
-    ~/.tfenv/bin/tfenv use ${TFENV_VERSION}
-
 # Install tfsec
-RUN TFSEC_VERSION="v1.28.13" && \
+RUN TFSEC_VERSION="v1.28.14" && \
     curl -L -o /usr/local/bin/tfsec "https://github.com/aquasecurity/tfsec/releases/download/${TFSEC_VERSION}/tfsec-linux-${TARGETARCH}" && \
     chmod +x /usr/local/bin/tfsec
 
 # Install Open Policy Agent (OPA)
-RUN OPA_VERSION="v1.3.0" && \
+RUN OPA_VERSION="v1.13.2" && \
     curl -L -o /usr/local/bin/opa "https://openpolicyagent.org/downloads/${OPA_VERSION}/opa_linux_${TARGETARCH}_static" && \
     chmod +x /usr/local/bin/opa
 
 # Install sopsh
-RUN SOPS_VERSION="v3.9.4" && \
+RUN SOPS_VERSION="v3.11.0" && \
     curl -L -o /usr/local/bin/sops "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.${TARGETARCH}" && \
     chmod +x /usr/local/bin/sops
-
-# Install GitHub CLI
-RUN GH_VERSION="2.67.0" && \
-    curl -L -o gh.tar.gz "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${TARGETARCH}.tar.gz" && \
-    tar -xzf gh.tar.gz && \
-    mv gh_*/bin/gh /usr/local/bin/ && \
-    rm -rf gh_*
-
-# Install kubectl
-RUN KUBECTL_VERSION="v1.32.0" && \
-    curl -L -o /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" && \
-    chmod +x /usr/local/bin/kubectl
-
-# Install helm
-RUN HELM_VERSION="v3.17.0" && \
-    curl -fsSL -o get_helm.sh "https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3" && \
-    chmod 700 get_helm.sh && \
-    ./get_helm.sh --version "$HELM_VERSION" && \
-    rm get_helm.sh
 
 # Cleanup
 RUN apt-get autoremove && \

@@ -16,20 +16,51 @@ BACKEND_KV_KEY="${BACKEND_KV_KEY:-sops}"
 BACKEND_NAME="${BACKEND_NAME:-sa${ENVIRONMENT}${RG_LOCATION_SHORT}${SUFFIX}}"
 CONTAINER_NAME="${CONTAINER_NAME:-tfstate-${DIR}}"
 
-export HELM_CACHE_HOME=/tmp/${DIR}/.helm_cache
-
 if [ -z "${OPA_BLAST_RADIUS}" ]; then
   OPA_BLAST_RADIUS=50
 fi
 
-prepare () {
-  AZ_ACCOUNT_TYPE="$(az account show --query user.type --output tsv)"
-  if [[ "${AZ_ACCOUNT_TYPE}" = "servicePrincipal" ]]; then
-    export AZURE_SERVICE_PRINCIPAL_APP_ID="$(az account show --query user.name --output tsv)"
-    export AZURE_SERVICE_PRINCIPAL_OBJECT_ID="$(az ad sp show --id $AZURE_SERVICE_PRINCIPAL_APP_ID --query id --output tsv)"
+get_sops_key_id () {
+  if [ -n "${BACKEND_KV_KEY_ID}" ]; then
+    echo "${BACKEND_KV_KEY_ID}"
+    return 0
   fi
-  export AZURE_SUBSCRIPTION_ID=$(az account show --output tsv --query id)
-  export AZURE_TENANT_ID=$(az account show --output tsv --query tenantId)
+
+  if command -v az >/dev/null 2>&1; then
+    az keyvault key show --name "${BACKEND_KV_KEY}" --vault-name "${BACKEND_KV}" --query key.kid --output tsv
+    return 0
+  fi
+
+  KEYVAULT_DNS_SUFFIX="${AZURE_KEYVAULT_DNS_SUFFIX:-vault.azure.net}"
+  echo "https://${BACKEND_KV}.${KEYVAULT_DNS_SUFFIX}/keys/${BACKEND_KV_KEY}"
+}
+
+prepare () {
+  if command -v az >/dev/null 2>&1; then
+    AZ_ACCOUNT_TYPE="$(az account show --query user.type --output tsv)"
+    if [[ "${AZ_ACCOUNT_TYPE}" = "servicePrincipal" ]]; then
+      export AZURE_SERVICE_PRINCIPAL_APP_ID="$(az account show --query user.name --output tsv)"
+      export AZURE_SERVICE_PRINCIPAL_OBJECT_ID="$(az ad sp show --id $AZURE_SERVICE_PRINCIPAL_APP_ID --query id --output tsv)"
+    fi
+    export AZURE_SUBSCRIPTION_ID="$(az account show --output tsv --query id)"
+    export AZURE_TENANT_ID="$(az account show --output tsv --query tenantId)"
+    export AZURE_EXCLUDE_CLI_CREDENTIAL="${AZURE_EXCLUDE_CLI_CREDENTIAL:-false}"
+  else
+    export AZURE_SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID:-${ARM_SUBSCRIPTION_ID}}"
+    export AZURE_TENANT_ID="${AZURE_TENANT_ID:-${ARM_TENANT_ID}}"
+    if [ -z "${AZURE_SUBSCRIPTION_ID}" ] || [ -z "${AZURE_TENANT_ID}" ]; then
+      echo "ERROR: AZURE_SUBSCRIPTION_ID and AZURE_TENANT_ID (or ARM_SUBSCRIPTION_ID/ARM_TENANT_ID) must be set when azure-cli is not installed."
+      exit 1
+    fi
+
+    if [ -n "${AZURE_CLIENT_ID}" ] && [ -z "${AZURE_SERVICE_PRINCIPAL_OBJECT_ID}" ]; then
+      echo "ERROR: AZURE_SERVICE_PRINCIPAL_OBJECT_ID must be set when using service principal auth without azure-cli."
+      exit 1
+    fi
+
+    export AZURE_EXCLUDE_CLI_CREDENTIAL="${AZURE_EXCLUDE_CLI_CREDENTIAL:-true}"
+  fi
+
   export AZURE_RESOURCE_GROUP_NAME="${BACKEND_RG}"
   export AZURE_RESOURCE_GROUP_LOCATION="${RG_LOCATION_LONG}"
   export AZURE_STORAGE_ACCOUNT_NAME="${BACKEND_NAME}"
@@ -37,7 +68,6 @@ prepare () {
   export AZURE_KEYVAULT_NAME="${BACKEND_KV}"
   export AZURE_KEYVAULT_KEY_NAME="${BACKEND_KV_KEY}"
   export AZURE_RESOURCE_LOCKS="${AZURE_RESOURCE_LOCKS:-true}"
-  export AZURE_EXCLUDE_CLI_CREDENTIAL="${AZURE_EXCLUDE_CLI_CREDENTIAL:-false}"
   export AZURE_EXCLUDE_ENVIRONMENT_CREDENTIAL="${AZURE_EXCLUDE_ENVIRONMENT_CREDENTIAL:-true}"
   export AZURE_EXCLUDE_MSI_CREDENTIAL="${AZURE_EXCLUDE_MSI_CREDENTIAL:-true}"
   tf-prepare azure
@@ -67,14 +97,14 @@ plan () {
     rm -rf .terraform/plans/${ENVIRONMENT}
     exit 1
   fi
-  SOPS_KEY_ID="$(az keyvault key show --name ${BACKEND_KV_KEY} --vault-name ${BACKEND_KV} --query key.kid --output tsv)"
+  SOPS_KEY_ID="$(get_sops_key_id)"
   sops --encrypt --azure-kv ${SOPS_KEY_ID} .terraform/plans/${ENVIRONMENT} > .terraform/plans/${ENVIRONMENT}.enc
   rm -rf .terraform/plans/${ENVIRONMENT}
 }
 
 apply () {
   init
-  SOPS_KEY_ID="$(az keyvault key show --name ${BACKEND_KV_KEY} --vault-name ${BACKEND_KV} --query key.kid --output tsv)"
+  SOPS_KEY_ID="$(get_sops_key_id)"
   sops --decrypt --azure-kv ${SOPS_KEY_ID} .terraform/plans/${ENVIRONMENT}.enc > .terraform/plans/${ENVIRONMENT}
   rm -rf .terraform/plans/${ENVIRONMENT}.enc
   set +e
